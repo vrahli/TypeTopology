@@ -10,7 +10,7 @@ module EffectfulForcing.Internal.Quote where
 
 open import MLTT.Spartan  hiding (rec ; _^_ ; _+_)
 open import Naturals.Order renaming (_≤ℕ_ to _≤_; _<ℕ_ to _<_)
-open import Naturals.Addition using (_+_; succ-right; sum-to-zero-gives-zero; addition-commutativity; zero-right-neutral; zero-left-neutral)
+open import Naturals.Addition using (_+_; succ-right; sum-to-zero-gives-zero; addition-commutativity; zero-right-neutral; zero-left-neutral; succ-left)
 open import Naturals.Properties using (positive-not-zero)
 open import EffectfulForcing.MFPSAndVariations.SystemT using (type ; ι ; _⇒_ ; 〖_〗)
 open import EffectfulForcing.Internal.SystemT
@@ -192,17 +192,29 @@ pairing-with-0-lemma n =
  sum-up-to (0 + n)     ＝⟨ ap sum-up-to (zero-left-neutral n)    ⟩
  sum-up-to n            ∎
 
-pairing-s0 : (x : ℕ) → pair (succ x , 0) ＝ succ (pair (0 , x))
-pairing-s0 x = {!!}
+pairing-with-succ-and-zero-lemma : (n : ℕ)
+                                 → pair (succ n , 0) ＝ succ (pair (0 , n))
+pairing-with-succ-and-zero-lemma n =
+ 0 + sum-up-to (0 + succ n) ＝⟨ zero-left-neutral (sum-up-to (0 + succ n))  ⟩
+ sum-up-to (0 + succ n)     ＝⟨ ap sum-up-to (zero-left-neutral (succ n))   ⟩
+ sum-up-to (succ n)         ＝⟨ refl                                        ⟩
+ succ n + sum-up-to n       ＝⟨ succ-left n (sum-up-to n)                   ⟩
+ succ (n + sum-up-to n)     ∎
+
+\end{code}
+
+\begin{code}
 
 pairing-xs : (x y : ℕ) → pair (x , succ y) ＝ succ (pair (succ x , y))
 pairing-xs x y = {!!}
 
-＝pair : {A : 𝓤 ̇ } {B : 𝓥 ̇ } {a₁ a₂ : A} {b₁ b₂ : B} → a₁ ＝ a₂ → b₁ ＝ b₂ → (a₁ , b₁) ＝ (a₂ , b₂)
-＝pair {_} {_} {A} {B} {a₁} {a₂} {b₁} {b₂} refl refl = refl
+＝pair : {A : 𝓤  ̇} {B : 𝓥  ̇} {a₁ a₂ : A} {b₁ b₂ : B}
+       → a₁ ＝ a₂ → b₁ ＝ b₂ → (a₁ , b₁) ＝ (a₂ , b₂)
+＝pair refl refl = refl
 
-＝pair→ : {A : 𝓤 ̇ } {B : 𝓥 ̇ } {a₁ a₂ : A} {b₁ b₂ : B} → (a₁ , b₁) ＝ (a₂ , b₂) → (a₁ ＝ a₂) × (b₁ ＝ b₂)
-＝pair→ {_} {_} {A} {B} {a₁} {a₂} {b₁} {b₂} refl = refl , refl
+＝pair→ : {A : 𝓤 ̇ } {B : 𝓥 ̇ } {a₁ a₂ : A} {b₁ b₂ : B}
+        → (a₁ , b₁) ＝ (a₂ , b₂) → (a₁ ＝ a₂) × (b₁ ＝ b₂)
+＝pair→ refl = refl , refl
 
 unpair-pairing-aux : (p : ℕ × ℕ) (n : ℕ) → pair p ＝ n → unpair n ＝ p
 unpair-pairing-aux (x , y) 0 h = ＝pair ((pr₁ (pair-zero-means-both-components-zero x y h)) ⁻¹) ((pr₂ (pair-zero-means-both-components-zero x y h)) ⁻¹)
@@ -211,59 +223,59 @@ unpair-pairing-aux (x , 0) (succ n) h with x
 ... | succ x
  with unpair-pairing-aux (0 , x) n
 ... | z with unpair n
-... | 0 , b = ap (λ k → succ k , 0) (pr₂ (＝pair→ (z (succ-injective ((pairing-s0 x) ⁻¹ ∙ h)))))
-... | succ a , b = 𝟘-elim {! (¬succ＝0 a (pr₁ (＝pair→ (z (succ-injective ((pairing-s0 x) ⁻¹ ∙ h)))))) !}
+... | 0 , b = ap (λ k → succ k , 0) (pr₂ (＝pair→ (z (succ-injective ((pairing-with-succ-and-zero-lemma x) ⁻¹ ∙ h)))))
+... | succ a , b = 𝟘-elim (positive-not-zero a (pr₁ (＝pair→ (z (succ-injective {!!})))))
 unpair-pairing-aux (x , succ y) (succ n) h with unpair-pairing-aux (succ x , y) n
 ... | z with unpair n
-... | 0 , b = 𝟘-elim {! (¬succ＝0 x ((pr₁ (＝pair→ (z (succ-injective ((pairing-xs x y) ⁻¹ ∙ h))))) ⁻¹)) !}
+... | 0 , b = 𝟘-elim (positive-not-zero x (pr₁ (＝pair→ (z (succ-injective (pairing-xs x y ⁻¹ ∙ h)))) ⁻¹))
 ... | succ a , b =
  ＝pair
   (succ-injective (pr₁ (＝pair→ (z (succ-injective ((pairing-xs x y) ⁻¹ ∙ h))))))
   (ap succ (pr₂ (＝pair→ (z (succ-injective ((pairing-xs x y) ⁻¹ ∙ h))))))
 
-unpair-pairing : (p : ℕ × ℕ) → unpair (pair p) ＝ p
-unpair-pairing p = unpair-pairing-aux p (pair p) refl
+unpair-is-retraction-of-pair : (p : ℕ × ℕ) → unpair (pair p) ＝ p
+unpair-is-retraction-of-pair p = unpair-pairing-aux p (pair p) refl
 
 pairing→₁-pairing : (x₁ x₂ : ℕ) → π₁ (pair (x₁ , x₂)) ＝ x₁
-pairing→₁-pairing x₁ x₂ = ap pr₁ (unpair-pairing (x₁ , x₂))
+pairing→₁-pairing x₁ x₂ = ap pr₁ (unpair-is-retraction-of-pair (x₁ , x₂))
 
 ＝pairing→₁ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → π₁ x₁ ＝ π₁ x₂
 ＝pairing→₁ {x₁} {x₂} refl = refl
 
 pairing→₂-pairing : (x₁ x₂ : ℕ) → π₂ (pair (x₁ , x₂)) ＝ x₂
-pairing→₂-pairing x₁ x₂ = ap pr₂ (unpair-pairing (x₁ , x₂))
+pairing→₂-pairing x₁ x₂ = ap pr₂ (unpair-is-retraction-of-pair (x₁ , x₂))
 
 ＝pairing→₂ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → π₂ x₁ ＝ π₂ x₂
 ＝pairing→₂ {x₁} {x₂} refl = refl
 
 π3₁-pairing3 : (x₁ x₂ x₃ : ℕ) → π3₁ (pair₃ (x₁ , x₂ , x₃)) ＝ x₁
-π3₁-pairing3 x₁ x₂ x₃ = ap pr₁ (unpair-pairing (x₁ , pair (x₂ , x₃)))
+π3₁-pairing3 x₁ x₂ x₃ = ap pr₁ (unpair-is-retraction-of-pair (x₁ , pair (x₂ , x₃)))
 
 ＝π3₁ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → π3₁ x₁ ＝ π3₁ x₂
 ＝π3₁ {x₁} {x₂} refl = refl
 
 π3₂-pairing3 : (x₁ x₂ x₃ : ℕ) → π3₂ (pair₃ (x₁ , x₂ , x₃)) ＝ x₂
 π3₂-pairing3 x₁ x₂ x₃ =
- ap (λ k → pr₁ (unpair (pr₂ k))) (unpair-pairing (x₁ , pair (x₂ , x₃)))
- ∙ ap pr₁ (unpair-pairing (x₂ , x₃))
+ ap (λ k → pr₁ (unpair (pr₂ k))) (unpair-is-retraction-of-pair (x₁ , pair (x₂ , x₃)))
+ ∙ ap pr₁ (unpair-is-retraction-of-pair (x₂ , x₃))
 
 ＝π3₂ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → π3₂ x₁ ＝ π3₂ x₂
 ＝π3₂ {x₁} {x₂} refl = refl
 
 pairing3→₃-pairing3 : (x₁ x₂ x₃ : ℕ) → pairing3→₃ (pair₃ (x₁ , x₂ , x₃)) ＝ x₃
 pairing3→₃-pairing3 x₁ x₂ x₃ =
- ap (λ k → pr₂ (unpair (pr₂ k))) (unpair-pairing (x₁ , pair (x₂ , x₃)))
- ∙ ap pr₂ (unpair-pairing (x₂ , x₃))
+ ap (λ k → pr₂ (unpair (pr₂ k))) (unpair-is-retraction-of-pair (x₁ , pair (x₂ , x₃)))
+ ∙ ap pr₂ (unpair-is-retraction-of-pair (x₂ , x₃))
 
 ＝pairing3→₃ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → pairing3→₃ x₁ ＝ pairing3→₃ x₂
 ＝pairing3→₃ {x₁} {x₂} refl = refl
 
-pairing-inj : (p q : ℕ × ℕ) → pair p ＝ pair q → p ＝ q
-pairing-inj p q h =
-  (((unpair-pairing p) ⁻¹) ∙ h1) ∙ (unpair-pairing q)
+pair-is-injective : (p q : ℕ × ℕ) → pair p ＝ pair q → p ＝ q
+pair-is-injective p q h =
+ unpair-is-retraction-of-pair p ⁻¹ ∙ † ∙ unpair-is-retraction-of-pair q
   where
-    h1 : unpair (pair p) ＝ unpair (pair q)
-    h1 = ap unpair h
+   † : unpair (pair p) ＝ unpair (pair q)
+   † = ap unpair h
 
 unpair＝ : (n : ℕ) → Σ x ꞉ ℕ , Σ y ꞉ ℕ , unpair n ＝ (x , y)
 unpair＝ n with unpair n
