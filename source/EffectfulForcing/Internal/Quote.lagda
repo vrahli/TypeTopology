@@ -447,6 +447,12 @@ pairing-non-dec x y
 #cons-1 : ℕ
 #cons-1 = 7
 
+\end{code}
+
+The encoding function `encode`:
+
+\begin{code}
+
 encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
 encode {Γ} {.ι}    Zero          = 0
 encode {Γ} {.ι}    (Succ t)      = 1 + encode t * #cons
