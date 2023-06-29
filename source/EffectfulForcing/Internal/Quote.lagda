@@ -8,11 +8,15 @@ https://github.com/vrahli/opentt/blob/master/encoding3.lagda
 
 module EffectfulForcing.Internal.Quote where
 
-open import MLTT.Spartan  hiding (rec ; _^_ ; _+_)
+open import MLTT.Spartan hiding (rec ; _^_ ; _+_)
 open import Naturals.Order renaming (_≤ℕ_ to _≤_; _<ℕ_ to _<_)
-open import Naturals.Addition using (_+_; succ-right; sum-to-zero-gives-zero; addition-commutativity; zero-right-neutral; zero-left-neutral; succ-left)
+open import Naturals.Addition
+ using (_+_; succ-right; sum-to-zero-gives-zero; addition-commutativity;
+        zero-right-neutral; zero-left-neutral; succ-left; addition-associativity)
 open import Naturals.Properties using (positive-not-zero)
-open import EffectfulForcing.MFPSAndVariations.SystemT using (type ; ι ; _⇒_ ; 〖_〗)
+open import EffectfulForcing.MFPSAndVariations.SystemT
+ using (type ; ι ; _⇒_ ; 〖_〗)
+open import UF.Base
 open import EffectfulForcing.Internal.SystemT
 open import UF.Base using (transport₂ ; transport₃ ; ap₂ ; ap₃)
 
@@ -205,33 +209,31 @@ pairing-with-succ-and-zero-lemma n =
 
 \begin{code}
 
-pairing-xs : (x y : ℕ) → pair (x , succ y) ＝ succ (pair (succ x , y))
-pairing-xs x y = {!!}
-
-＝pair : {A : 𝓤  ̇} {B : 𝓥  ̇} {a₁ a₂ : A} {b₁ b₂ : B}
-       → a₁ ＝ a₂ → b₁ ＝ b₂ → (a₁ , b₁) ＝ (a₂ , b₂)
-＝pair refl refl = refl
-
-＝pair→ : {A : 𝓤 ̇ } {B : 𝓥 ̇ } {a₁ a₂ : A} {b₁ b₂ : B}
-        → (a₁ , b₁) ＝ (a₂ , b₂) → (a₁ ＝ a₂) × (b₁ ＝ b₂)
-＝pair→ refl = refl , refl
+pairing-succ-lemma : (m n : ℕ) → pair (m , succ n) ＝ succ (pair (succ m , n))
+pairing-succ-lemma m n =
+ succ n + sum-up-to (succ n + m)        ＝⟨ Ⅰ ⟩
+ succ (n + sum-up-to (succ n + m))      ＝⟨ Ⅱ ⟩
+ succ (n + sum-up-to (succ (n + m)))    ∎
+  where
+   Ⅰ = succ-left n (sum-up-to (succ n + m))
+   Ⅱ = ap (λ - → succ (n + sum-up-to -)) (succ-left n m)
 
 unpair-pairing-aux : (p : ℕ × ℕ) (n : ℕ) → pair p ＝ n → unpair n ＝ p
-unpair-pairing-aux (x , y) 0 h = ＝pair ((pr₁ (pair-zero-means-both-components-zero x y h)) ⁻¹) ((pr₂ (pair-zero-means-both-components-zero x y h)) ⁻¹)
+unpair-pairing-aux (x , y) 0 h = to-×-＝ ((pr₁ (pair-zero-means-both-components-zero x y h)) ⁻¹) ((pr₂ (pair-zero-means-both-components-zero x y h)) ⁻¹)
 unpair-pairing-aux (x , 0) (succ n) h with x
 ... | 0 = 𝟘-elim (positive-not-zero n (h ⁻¹))
 ... | succ x
  with unpair-pairing-aux (0 , x) n
 ... | z with unpair n
-... | 0 , b = ap (λ k → succ k , 0) (pr₂ (＝pair→ (z (succ-injective ((pairing-with-succ-and-zero-lemma x) ⁻¹ ∙ h)))))
-... | succ a , b = 𝟘-elim (positive-not-zero a (pr₁ (＝pair→ (z (succ-injective {!!})))))
+... | 0 , b = ap (λ k → succ k , 0) (pr₂ (from-×-＝' (z (succ-injective ((pairing-with-succ-and-zero-lemma x) ⁻¹ ∙ h)))))
+... | succ a , b = 𝟘-elim (positive-not-zero a (pr₁ (from-×-＝' (z (succ-injective {!!})))))
 unpair-pairing-aux (x , succ y) (succ n) h with unpair-pairing-aux (succ x , y) n
 ... | z with unpair n
-... | 0 , b = 𝟘-elim (positive-not-zero x (pr₁ (＝pair→ (z (succ-injective (pairing-xs x y ⁻¹ ∙ h)))) ⁻¹))
+... | 0 , b = 𝟘-elim (positive-not-zero x (pr₁ (from-×-＝' (z (succ-injective (pairing-succ-lemma x y ⁻¹ ∙ h)))) ⁻¹))
 ... | succ a , b =
- ＝pair
-  (succ-injective (pr₁ (＝pair→ (z (succ-injective ((pairing-xs x y) ⁻¹ ∙ h))))))
-  (ap succ (pr₂ (＝pair→ (z (succ-injective ((pairing-xs x y) ⁻¹ ∙ h))))))
+ to-×-＝
+  (succ-injective (pr₁ (from-×-＝' (z (succ-injective ((pairing-succ-lemma x y) ⁻¹ ∙ h))))))
+  (ap succ (pr₂ (from-×-＝' (z (succ-injective ((pairing-succ-lemma x y) ⁻¹ ∙ h))))))
 
 unpair-is-retraction-of-pair : (p : ℕ × ℕ) → unpair (pair p) ＝ p
 unpair-is-retraction-of-pair p = unpair-pairing-aux p (pair p) refl
@@ -299,7 +301,7 @@ pairing-unpair (succ n) with unpair＝ n
   where
     h1 : y + sum-up-to y ＝ pair (unpair n)
     h1 with unpair n
-    ... | a , b = ap (λ k → y + sum-up-to k) (zero-right-neutral y ⁻¹) ∙ ap₂ (λ i j → pair (i , j)) (pr₁ (＝pair→ p) ⁻¹) (pr₂ (＝pair→ p) ⁻¹)
+    ... | a , b = ap (λ k → y + sum-up-to k) (zero-right-neutral y ⁻¹) ∙ ap₂ (λ i j → pair (i , j)) (pr₁ (from-×-＝' p) ⁻¹) (pr₂ (from-×-＝' p) ⁻¹)
 
 unpair-inj : (n m : ℕ) → unpair n ＝ unpair m → n ＝ m
 unpair-inj n m h =
@@ -308,16 +310,14 @@ unpair-inj n m h =
     h1 : pair (unpair n) ＝ pair (unpair m)
     h1 = ap pair h
 
-+assoc-aux : (x y : ℕ) → x + x + (y + y) ＝ y + x + (y + x)
-+assoc-aux x y = {!!}
-{-
-  rewrite +-comm y x
-        | sym (+-assoc (x + y) x y)
-        | +-assoc x y x
-        | +-comm y x
-        | sym (+-assoc x x y)
-        | sym (+-assoc (x + x) y y)  = refl
--}
++assoc-aux : (m n : ℕ) → m + m + (n + n) ＝ n + m + (n + m)
++assoc-aux m n =
+ (m + m) + (n + n)   ＝⟨ addition-associativity (m + m) n n ⁻¹        ⟩
+ ((m + m) + n) + n   ＝⟨ ap (_+ n) (addition-commutativity (m + m) n) ⟩
+ (n + (m + m)) + n   ＝⟨ ap (_+ n) (addition-associativity n m m ⁻¹)  ⟩
+ ((n + m) + m) + n   ＝⟨ addition-associativity (n + m) m n           ⟩
+ (n + m) + (m + n)   ＝⟨ ap ((n + m) +_) (addition-commutativity m n) ⟩
+ n + m + (n + m)     ∎
 
 {-
 pairing-spec-aux : (n x y : ℕ) → n ＝ y + x → pair (x , y) * 2 ＝ y * 2 + n * suc n
