@@ -10,7 +10,8 @@ module EffectfulForcing.Internal.Quote where
 
 open import MLTT.Spartan  hiding (rec ; _^_ ; _+_)
 open import Naturals.Order renaming (_≤ℕ_ to _≤_; _<ℕ_ to _<_)
-open import Naturals.Addition using (_+_; succ-right; sum-to-zero-gives-zero; addition-commutativity)
+open import Naturals.Addition using (_+_; succ-right; sum-to-zero-gives-zero; addition-commutativity; zero-right-neutral; zero-left-neutral)
+open import Naturals.Properties using (positive-not-zero)
 open import EffectfulForcing.MFPSAndVariations.SystemT using (type ; ι ; _⇒_ ; 〖_〗)
 open import EffectfulForcing.Internal.SystemT
 open import UF.Base using (transport₂ ; transport₃ ; ap₂ ; ap₃)
@@ -127,38 +128,69 @@ p is (pairing m n), and we want to return n
 
 \end{code}
 
+The first projection of a triple.
+
 \begin{code}
 
--- n is (pairing3 x y z), and we want to return x
 π3₁ : ℕ → ℕ
 π3₁ = π₁
 
--- n is (pairing3 x y z), and we want to return y
-pairing3→₂ : (n : ℕ) → ℕ
-pairing3→₂ n = pr₁ (unpair (pr₂ (unpair n)))
+\end{code}
 
--- n is (pairing3 x y z), and we want to return z
+The second projection for a triple.
+
+\begin{code}
+
+π3₂ : (n : ℕ) → ℕ
+π3₂ n = pr₁ (unpair (pr₂ (unpair n)))
+
+\end{code}
+
+The third projection from a triple.
+
+\begin{code}
+
 pairing3→₃ : (n : ℕ) → ℕ
 pairing3→₃ n = pr₂ (unpair (pr₂ (unpair n)))
 
-+＝0→ : (n m : ℕ) → n + m ＝ 0 → (n ＝ 0) × (m ＝ 0)
-+＝0→ n m h = sum-to-zero-gives-zero m n h′ , sum-to-zero-gives-zero n m h
+\end{code}
+
+\begin{code}
+
+sum-zero-means-both-summands-zero : (n m : ℕ) → n + m ＝ 0 → (n ＝ 0) × (m ＝ 0)
+sum-zero-means-both-summands-zero n m h =
+ sum-to-zero-gives-zero m n h′ , sum-to-zero-gives-zero n m h
+  where
+   h′ : m + n ＝ 0
+   h′ = m + n ＝⟨ addition-commutativity m n ⟩ n + m ＝⟨ h ⟩ 0 ∎
+
+sum-up-to-zero-means-zero : (n : ℕ) → sum-up-to n ＝ 0 → n ＝ 0
+sum-up-to-zero-means-zero zero     refl = refl
+sum-up-to-zero-means-zero (succ n) p    =
+ pr₁ (sum-zero-means-both-summands-zero (succ n) (sum-up-to n) p)
+
+pair-zero-means-both-components-zero : (m n : ℕ)
+                                     → pair (m , n) ＝ 0
+                                     → (m ＝ 0) × (n ＝ 0)
+pair-zero-means-both-components-zero m n p = † , ‡
  where
-  h′ : m + n ＝ 0
-  h′ = m + n ＝⟨ addition-commutativity m n ⟩ n + m ＝⟨ h ⟩ 0 ∎
+  ♣ : sum-up-to (n + m) ＝ 0
+  ♣ = pr₂ (sum-zero-means-both-summands-zero n (sum-up-to (n + m)) p)
 
-+0 : (n : ℕ) → n + 0 ＝ n
-+0 0 = refl
-+0 (succ n) = ap succ (+0 n)
+  ♥ : n + m ＝ 0
+  ♥ = sum-up-to-zero-means-zero (n + m) ♣
 
-pairingAux＝0→ : (n : ℕ) → sum-up-to n ＝ 0 → n ＝ 0
-pairingAux＝0→ = {!!}
+  ‡ : n ＝ 0
+  ‡ = pr₁ (sum-zero-means-both-summands-zero n (sum-up-to (n + m)) p)
 
-pairing＝0→ : (x y : ℕ) → pair (x , y) ＝ 0 → (x ＝ 0) × (y ＝ 0)
-pairing＝0→ = {!!}
+  † : m ＝ 0
+  † = pr₂ (sum-zero-means-both-summands-zero n m ♥)
 
-pairing-x0 : (x : ℕ) → pair (x , 0) ＝ sum-up-to x
-pairing-x0 x = {!!}
+pairing-with-0-lemma : (n : ℕ) → pair (n , 0) ＝ sum-up-to n
+pairing-with-0-lemma n =
+ 0 + sum-up-to (0 + n) ＝⟨ zero-left-neutral (sum-up-to (0 + n)) ⟩
+ sum-up-to (0 + n)     ＝⟨ ap sum-up-to (zero-left-neutral n)    ⟩
+ sum-up-to n            ∎
 
 pairing-s0 : (x : ℕ) → pair (succ x , 0) ＝ succ (pair (0 , x))
 pairing-s0 x = {!!}
@@ -172,21 +204,18 @@ pairing-xs x y = {!!}
 ＝pair→ : {A : 𝓤 ̇ } {B : 𝓥 ̇ } {a₁ a₂ : A} {b₁ b₂ : B} → (a₁ , b₁) ＝ (a₂ , b₂) → (a₁ ＝ a₂) × (b₁ ＝ b₂)
 ＝pair→ {_} {_} {A} {B} {a₁} {a₂} {b₁} {b₂} refl = refl , refl
 
-¬succ＝0 : (a : ℕ) → ¬ (succ a ＝ 0)
-¬succ＝0 a ()
-
 unpair-pairing-aux : (p : ℕ × ℕ) (n : ℕ) → pair p ＝ n → unpair n ＝ p
-unpair-pairing-aux (x , y) 0 h = ＝pair ((pr₁ (pairing＝0→ x y h)) ⁻¹) ((pr₂ (pairing＝0→ x y h)) ⁻¹)
+unpair-pairing-aux (x , y) 0 h = ＝pair ((pr₁ (pair-zero-means-both-components-zero x y h)) ⁻¹) ((pr₂ (pair-zero-means-both-components-zero x y h)) ⁻¹)
 unpair-pairing-aux (x , 0) (succ n) h with x
-... | 0 = 𝟘-elim (¬succ＝0 n (h ⁻¹))
+... | 0 = 𝟘-elim (positive-not-zero n (h ⁻¹))
 ... | succ x
  with unpair-pairing-aux (0 , x) n
 ... | z with unpair n
 ... | 0 , b = ap (λ k → succ k , 0) (pr₂ (＝pair→ (z (succ-injective ((pairing-s0 x) ⁻¹ ∙ h)))))
-... | succ a , b = 𝟘-elim (¬succ＝0 a (pr₁ (＝pair→ (z (succ-injective ((pairing-s0 x) ⁻¹ ∙ h))))))
+... | succ a , b = 𝟘-elim {! (¬succ＝0 a (pr₁ (＝pair→ (z (succ-injective ((pairing-s0 x) ⁻¹ ∙ h)))))) !}
 unpair-pairing-aux (x , succ y) (succ n) h with unpair-pairing-aux (succ x , y) n
 ... | z with unpair n
-... | 0 , b = 𝟘-elim (¬succ＝0 x ((pr₁ (＝pair→ (z (succ-injective ((pairing-xs x y) ⁻¹ ∙ h))))) ⁻¹))
+... | 0 , b = 𝟘-elim {! (¬succ＝0 x ((pr₁ (＝pair→ (z (succ-injective ((pairing-xs x y) ⁻¹ ∙ h))))) ⁻¹)) !}
 ... | succ a , b =
  ＝pair
   (succ-injective (pr₁ (＝pair→ (z (succ-injective ((pairing-xs x y) ⁻¹ ∙ h))))))
@@ -213,13 +242,13 @@ pairing→₂-pairing x₁ x₂ = ap pr₂ (unpair-pairing (x₁ , x₂))
 ＝π3₁ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → π3₁ x₁ ＝ π3₁ x₂
 ＝π3₁ {x₁} {x₂} refl = refl
 
-pairing3→₂-pairing3 : (x₁ x₂ x₃ : ℕ) → pairing3→₂ (pair₃ (x₁ , x₂ , x₃)) ＝ x₂
-pairing3→₂-pairing3 x₁ x₂ x₃ =
+π3₂-pairing3 : (x₁ x₂ x₃ : ℕ) → π3₂ (pair₃ (x₁ , x₂ , x₃)) ＝ x₂
+π3₂-pairing3 x₁ x₂ x₃ =
  ap (λ k → pr₁ (unpair (pr₂ k))) (unpair-pairing (x₁ , pair (x₂ , x₃)))
  ∙ ap pr₁ (unpair-pairing (x₂ , x₃))
 
-＝pairing3→₂ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → pairing3→₂ x₁ ＝ pairing3→₂ x₂
-＝pairing3→₂ {x₁} {x₂} refl = refl
+＝π3₂ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → π3₂ x₁ ＝ π3₂ x₂
+＝π3₂ {x₁} {x₂} refl = refl
 
 pairing3→₃-pairing3 : (x₁ x₂ x₃ : ℕ) → pairing3→₃ (pair₃ (x₁ , x₂ , x₃)) ＝ x₃
 pairing3→₃-pairing3 x₁ x₂ x₃ =
@@ -258,7 +287,7 @@ pairing-unpair (succ n) with unpair＝ n
   where
     h1 : y + sum-up-to y ＝ pair (unpair n)
     h1 with unpair n
-    ... | a , b = ap (λ k → y + sum-up-to k) (+0 y ⁻¹) ∙ ap₂ (λ i j → pair (i , j)) (pr₁ (＝pair→ p) ⁻¹) (pr₂ (＝pair→ p) ⁻¹)
+    ... | a , b = ap (λ k → y + sum-up-to k) (zero-right-neutral y ⁻¹) ∙ ap₂ (λ i j → pair (i , j)) (pr₁ (＝pair→ p) ⁻¹) (pr₂ (＝pair→ p) ⁻¹)
 
 unpair-inj : (n m : ℕ) → unpair n ＝ unpair m → n ＝ m
 unpair-inj n m h =
