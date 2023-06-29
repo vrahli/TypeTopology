@@ -448,13 +448,13 @@ pairing-non-dec x y
 #cons-1 = 7
 
 encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
-encode {Γ} {.ι} Zero = 0
-encode {Γ} {.ι} (Succ t) = {!1 + encode t * #cons!}
-encode {Γ} {σ} (Rec t t₁ t₂) = {!!}
-encode {Γ} {σ} (ν i) = {!!}
-encode {Γ} {σ ⇒ τ} (ƛ t) = {!!}
-encode {Γ} {σ} (t · t₁) = {!!}
-encode {Γ} {.ι} (Quote t) = {!!}
-encode {Γ} {σ} (Unquote t) = {!!}
+encode {Γ} {.ι}    Zero          = 0
+encode {Γ} {.ι}    (Succ t)      = 1 + encode t * #cons
+encode {Γ} {σ}     (Rec t t₁ t₂) = {!!}
+encode {Γ} {σ}     (ν i)         = {!i * #cons!}
+encode {Γ} {σ ⇒ τ} (ƛ t)         = {!!}
+encode {Γ} {σ}     (t · t₁)      = {!!}
+encode {Γ} {.ι}    (Quote t)     = {!!}
+encode {Γ} {σ}     (Unquote t)   = {!!}
 
 \end{code}
