@@ -13,6 +13,8 @@ open import Naturals.Order renaming (_≤ℕ_ to _≤_; _<ℕ_ to _<_)
 open import Naturals.Addition
  using (_+_; succ-right; sum-to-zero-gives-zero; addition-commutativity;
         zero-right-neutral; zero-left-neutral; succ-left; addition-associativity)
+open import Naturals.Multiplication
+ using (_*_)
 open import Naturals.Properties using (positive-not-zero)
 open import EffectfulForcing.MFPSAndVariations.SystemT
  using (type ; ι ; _⇒_ ; 〖_〗)
@@ -114,7 +116,7 @@ unpair (succ n) with unpair n
 
 \end{code}
 
-`p` is `pairing m n`, and we want to return `m`
+First projection for a pair.
 
 \begin{code}
 
@@ -123,7 +125,7 @@ unpair (succ n) with unpair n
 
 \end{code}
 
-p is (pairing m n), and we want to return n
+Second projection for a pair.
 
 \begin{code}
 
@@ -289,26 +291,32 @@ fst-unpair＝ n x y u = ap pr₁ u
 snd-unpair＝ : (n x y : ℕ) → unpair n ＝ (x , y) → pr₂ (unpair n) ＝ y
 snd-unpair＝ n x y u = ap pr₂ u
 
-pairing-unpair : (n : ℕ) → pair (unpair n) ＝ n
-pairing-unpair 0 = refl
-pairing-unpair (succ n) with unpair＝ n
-... | succ x , y , p = {!!} --rewrite p = →s＝s (trans h1 (pairing-unpair n))
+pair-is-retract-of-unpair' : (n : ℕ) → pair (unpair n) ＝ n
+pair-is-retract-of-unpair' 0 = refl
+pair-is-retract-of-unpair' (succ n) with unpair＝ n
+... | succ x , y , p = {!!} --rewrite p = →s＝s (trans h1 (pair-is-retract-of-unpair n))
   where
     h1 : y + succ ((y + x) + sum-up-to (y + x)) ＝ pair (unpair n)
     h1 with unpair n
     ... | a , b = {!!}
-... | 0 , y , p = {!!} --rewrite p = →s＝s (trans h1 (pairing-unpair n))
+... | 0 , y , p = {!!} --rewrite p = →s＝s (trans h1 (pair-is-retract-of-unpair n))
   where
     h1 : y + sum-up-to y ＝ pair (unpair n)
     h1 with unpair n
     ... | a , b = ap (λ k → y + sum-up-to k) (zero-right-neutral y ⁻¹) ∙ ap₂ (λ i j → pair (i , j)) (pr₁ (from-×-＝' p) ⁻¹) (pr₂ (from-×-＝' p) ⁻¹)
 
+pair-is-retract-of-unpair : (n : ℕ) → pair (unpair n) ＝ n
+pair-is-retract-of-unpair zero                        = refl
+pair-is-retract-of-unpair (succ n) with unpair＝ n
+pair-is-retract-of-unpair (succ n) | zero    , n₂ , p = {!!} ＝⟨ {!!} ⟩ {!!} ∎
+pair-is-retract-of-unpair (succ n) | succ n₁ , n₂ , p = {!!} ＝⟨ {!!} ⟩ succ n ∎
+
 unpair-inj : (n m : ℕ) → unpair n ＝ unpair m → n ＝ m
 unpair-inj n m h =
-  (((pairing-unpair n) ⁻¹) ∙ h1) ∙ (pairing-unpair m)
+ pair-is-retract-of-unpair' n ⁻¹ ∙ † ∙ (pair-is-retract-of-unpair' m)
   where
-    h1 : pair (unpair n) ＝ pair (unpair m)
-    h1 = ap pair h
+   † : pair (unpair n) ＝ pair (unpair m)
+   † = ap pair h
 
 +assoc-aux : (m n : ℕ) → m + m + (n + n) ＝ n + m + (n + m)
 +assoc-aux m n =
@@ -318,6 +326,9 @@ unpair-inj n m h =
  ((n + m) + m) + n   ＝⟨ addition-associativity (n + m) m n           ⟩
  (n + m) + (m + n)   ＝⟨ ap ((n + m) +_) (addition-commutativity m n) ⟩
  n + m + (n + m)     ∎
+
+pairing-spec-aux : {!(n x y : ℕ) → n ＝ y + x → pair (x , y) * 2 ＝ y * 2 + n * suc n!}
+pairing-spec-aux = {!!}
 
 {-
 pairing-spec-aux : (n x y : ℕ) → n ＝ y + x → pair (x , y) * 2 ＝ y * 2 + n * suc n
