@@ -15,7 +15,7 @@ open import Naturals.Addition
         zero-right-neutral; zero-left-neutral; succ-left; addition-associativity)
 open import Naturals.Multiplication
  using (_*_)
-open import Naturals.Properties using (positive-not-zero)
+open import Naturals.Properties using (positive-not-zero; ℕ-cases)
 open import EffectfulForcing.MFPSAndVariations.SystemT
  using (type ; ι ; _⇒_ ; 〖_〗)
 open import UF.Base
@@ -108,11 +108,23 @@ The unpairing function `unpair`:
 
 \begin{code}
 
+natrec : {A : 𝓤  ̇} → A → (ℕ → A → A) → ℕ → A
+natrec z s zero     = z
+natrec z s (succ n) = s n (natrec z s n)
+
+unpair' : ℕ → ℕ × ℕ
+unpair' zero     = zero , zero
+unpair' (succ n) with unpair' n
+unpair' (succ n) | zero   , y = succ y , zero
+unpair' (succ n) | succ x , y = x      , succ y
+
+𝔥 : ℕ → ℕ → ℕ × ℕ
+𝔥 zero     y = succ y , zero
+𝔥 (succ x) y = x      , succ y
+
 unpair : ℕ → ℕ × ℕ
-unpair 0 = 0 , 0
-unpair (succ n) with unpair n
-... | zero   , y = succ y , zero
-... | succ x , y = x      , succ y
+unpair zero     = zero , zero
+unpair (succ n) = uncurry 𝔥 (unpair n)
 
 \end{code}
 
@@ -221,14 +233,20 @@ pairing-succ-lemma m n =
    Ⅱ = ap (λ - → succ (n + sum-up-to -)) (succ-left n m)
 
 unpair-pairing-aux : (p : ℕ × ℕ) (n : ℕ) → pair p ＝ n → unpair n ＝ p
-unpair-pairing-aux (x , y) 0 h = to-×-＝ ((pr₁ (pair-zero-means-both-components-zero x y h)) ⁻¹) ((pr₂ (pair-zero-means-both-components-zero x y h)) ⁻¹)
+unpair-pairing-aux (x , y) 0 h = to-×-＝ † ‡
+ where
+  † : 0 ＝ x
+  † = pr₁ (pair-zero-means-both-components-zero x y h) ⁻¹
+  ‡ : 0 ＝ y
+  ‡ = pr₂ (pair-zero-means-both-components-zero x y h) ⁻¹
+
 unpair-pairing-aux (x , 0) (succ n) h with x
 ... | 0 = 𝟘-elim (positive-not-zero n (h ⁻¹))
 ... | succ x
  with unpair-pairing-aux (0 , x) n
 ... | z with unpair n
 ... | 0 , b = ap (λ k → succ k , 0) (pr₂ (from-×-＝' (z (succ-injective ((pairing-with-succ-and-zero-lemma x) ⁻¹ ∙ h)))))
-... | succ a , b = 𝟘-elim (positive-not-zero a (pr₁ (from-×-＝' (z (succ-injective {!!})))))
+... | succ a , b = 𝟘-elim (positive-not-zero a (pr₁ (from-×-＝' (z (succ-injective (pairing-with-succ-and-zero-lemma x ⁻¹ ∙ h))))))
 unpair-pairing-aux (x , succ y) (succ n) h with unpair-pairing-aux (succ x , y) n
 ... | z with unpair n
 ... | 0 , b = 𝟘-elim (positive-not-zero x (pr₁ (from-×-＝' (z (succ-injective (pairing-succ-lemma x y ⁻¹ ∙ h)))) ⁻¹))
@@ -291,25 +309,32 @@ fst-unpair＝ n x y u = ap pr₁ u
 snd-unpair＝ : (n x y : ℕ) → unpair n ＝ (x , y) → pr₂ (unpair n) ＝ y
 snd-unpair＝ n x y u = ap pr₂ u
 
-pair-is-retract-of-unpair' : (n : ℕ) → pair (unpair n) ＝ n
-pair-is-retract-of-unpair' 0 = refl
-pair-is-retract-of-unpair' (succ n) with unpair＝ n
-... | succ x , y , p = {!!} --rewrite p = →s＝s (trans h1 (pair-is-retract-of-unpair n))
-  where
-    h1 : y + succ ((y + x) + sum-up-to (y + x)) ＝ pair (unpair n)
-    h1 with unpair n
-    ... | a , b = {!!}
-... | 0 , y , p = {!!} --rewrite p = →s＝s (trans h1 (pair-is-retract-of-unpair n))
-  where
-    h1 : y + sum-up-to y ＝ pair (unpair n)
-    h1 with unpair n
-    ... | a , b = ap (λ k → y + sum-up-to k) (zero-right-neutral y ⁻¹) ∙ ap₂ (λ i j → pair (i , j)) (pr₁ (from-×-＝' p) ⁻¹) (pr₂ (from-×-＝' p) ⁻¹)
-
 pair-is-retract-of-unpair : (n : ℕ) → pair (unpair n) ＝ n
-pair-is-retract-of-unpair zero                        = refl
+
+lemma₁ : (n n₂ : ℕ) → unpair n ＝ (zero , n₂) → pair (unpair (succ n)) ＝ succ n
+lemma₁ n n₂ p =
+ pair (unpair (succ n))  ＝⟨ ap (λ - → pair (uncurry 𝔥 -)) p      ⟩
+ pair (succ n₂ , zero)   ＝⟨ pairing-with-succ-and-zero-lemma n₂  ⟩
+ succ (pair (zero , n₂)) ＝⟨ ap (succ ∘ pair) p ⁻¹                ⟩
+ succ (pair (unpair n))  ＝⟨ ap succ (pair-is-retract-of-unpair n) ⟩
+ succ n                  ∎
+
+lemma₂ : (n n₁ n₂ : ℕ)
+       → unpair n ＝ (succ n₁ , n₂)
+       → pair (unpair (succ n)) ＝ succ n
+lemma₂ n n₁ n₂ p =
+ pair (unpair (succ n))      ＝⟨ ap (λ - → pair (uncurry 𝔥 -)) p       ⟩
+ pair (n₁ , succ n₂)         ＝⟨ pairing-succ-lemma n₁ n₂              ⟩
+ succ (pair (succ n₁ , n₂))  ＝⟨ ap (succ ∘ pair) (p ⁻¹)               ⟩
+ succ (pair (unpair n))      ＝⟨ ap succ (pair-is-retract-of-unpair n) ⟩
+ succ n                      ∎
+
+pair-is-retract-of-unpair zero = refl
 pair-is-retract-of-unpair (succ n) with unpair＝ n
-pair-is-retract-of-unpair (succ n) | zero    , n₂ , p = {!!} ＝⟨ {!!} ⟩ {!!} ∎
-pair-is-retract-of-unpair (succ n) | succ n₁ , n₂ , p = {!!} ＝⟨ {!!} ⟩ succ n ∎
+pair-is-retract-of-unpair (succ n) | zero    , n₂ , p = lemma₁ n n₂ p
+pair-is-retract-of-unpair (succ n) | succ n₁ , n₂ , p = lemma₂ n n₁ n₂ p
+
+{--
 
 unpair-inj : (n m : ℕ) → unpair n ＝ unpair m → n ＝ m
 unpair-inj n m h =
@@ -456,11 +481,13 @@ The encoding function `encode`:
 encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
 encode {Γ} {.ι}    Zero          = 0
 encode {Γ} {.ι}    (Succ t)      = 1 + encode t * #cons
-encode {Γ} {σ}     (Rec t t₁ t₂) = {!!}
+encode {Γ} {σ}     (Rec t t₁ t₂) = 2 + pair₃ (encode t , encode t₁ , encode t₂)
 encode {Γ} {σ}     (ν i)         = {!i * #cons!}
 encode {Γ} {σ ⇒ τ} (ƛ t)         = {!!}
 encode {Γ} {σ}     (t · t₁)      = {!!}
 encode {Γ} {.ι}    (Quote t)     = {!!}
 encode {Γ} {σ}     (Unquote t)   = {!!}
+
+--}
 
 \end{code}
