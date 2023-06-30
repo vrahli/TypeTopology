@@ -112,12 +112,6 @@ natrec : {A : 𝓤  ̇} → A → (ℕ → A → A) → ℕ → A
 natrec z s zero     = z
 natrec z s (succ n) = s n (natrec z s n)
 
-unpair' : ℕ → ℕ × ℕ
-unpair' zero     = zero , zero
-unpair' (succ n) with unpair' n
-unpair' (succ n) | zero   , y = succ y , zero
-unpair' (succ n) | succ x , y = x      , succ y
-
 𝔥 : ℕ → ℕ → ℕ × ℕ
 𝔥 zero     y = succ y , zero
 𝔥 (succ x) y = x      , succ y
@@ -341,8 +335,6 @@ unpair-inj n m h =
    † : pair (unpair n) ＝ pair (unpair m)
    † = ap pair h
 
-{--
-
 +assoc-aux : (m n : ℕ) → m + m + (n + n) ＝ n + m + (n + m)
 +assoc-aux m n =
  (m + m) + (n + n)   ＝⟨ addition-associativity (m + m) n n ⁻¹        ⟩
@@ -352,45 +344,23 @@ unpair-inj n m h =
  (n + m) + (m + n)   ＝⟨ ap ((n + m) +_) (addition-commutativity m n) ⟩
  n + m + (n + m)     ∎
 
-pairing-spec-aux : {!(n x y : ℕ) → n ＝ y + x → pair (x , y) * 2 ＝ y * 2 + n * suc n!}
+\end{code}
+
+\begin{code}
+
+pairing-spec-aux : (n x y : ℕ) → n ＝ y + x → pair (x , y) * 2 ＝ y * 2 + n * succ n
 pairing-spec-aux = {!!}
 
-{-
-pairing-spec-aux : (n x y : ℕ) → n ＝ y + x → pair (x , y) * 2 ＝ y * 2 + n * suc n
-pairing-spec-aux 0 x y h rewrite fst (+＝0→ y x (sym h)) | snd (+＝0→ y x (sym h)) = refl
-pairing-spec-aux (suc n) 0 0 ()
-pairing-spec-aux (suc n) (suc x) 0 h
-  rewrite *-distribʳ-+ 2 x (sum-up-to x)
-        | sym (pairing-x0 x)
-        | pairing-spec-aux n x 0 (suc-injective h)
-        | suc-injective h
-        | *-comm x 2
-        | +0 x
-        | *-suc x (suc x)
-        | +-assoc x x (x * suc x)
-  = refl
-pairing-spec-aux (suc n) x (suc y) h
-  rewrite *-distribʳ-+ 2 y (suc (y + x + sum-up-to (y + x)))
-        | +-comm y x
-        | +-assoc x y (sum-up-to (x + y))
-        | *-distribʳ-+ 2 x (y + sum-up-to (x + y))
-        | +-comm x y
-        | pairing-spec-aux n x y (suc-injective h)
-        | suc-injective h
-        | *-suc (y + x) (suc (y + x))
-        | *-comm x 2
-        | *-comm y 2
-        | +0 y
-        | +0 x
-        | sym (+-assoc (y + x) (y + x) ((y + x) * suc (y + x)))
-        | sym (+-assoc (x + x) (y + y) ((y + x) * suc (y + x)))
-        | +assoc-aux x y = refl
--}
-
-{-
-pairing-spec : (x y : ℕ) → pair (x , y) * 2 ＝ y * 2 + (y + x) * suc (y + x)
+pairing-spec : (x y : ℕ) → pair (x , y) * 2 ＝ y * 2 + (y + x) * succ (y + x)
 pairing-spec x y = pairing-spec-aux (y + x) x y refl
--}
+
+→＝+ₗ : {a b c : ℕ} → a ＝ b → a + c ＝ b + c
+→＝+ₗ {a} {b} {c} refl = refl
+
+\end{code}
+
+{--
+
 
 {-
 2∣+* : (x : ℕ) → 2 ∣ (x + x * x)
@@ -409,9 +379,6 @@ pairing-spec x y = pairing-spec-aux (y + x) x y refl
              | +0 (x + z)
              | +-comm x z = +assoc-aux x z
 -}
-
-→＝+ₗ : {a b c : ℕ} → a ＝ b → a + c ＝ b + c
-→＝+ₗ {a} {b} {c} refl = refl
 
 {-
 pairing-spec2 : (x y : ℕ) → pair (x , y) ＝ y + (y + x) * suc (y + x) / 2
@@ -474,20 +441,20 @@ pairing-non-dec x y
 
 \end{code}
 
-The encoding function `encode`:
+-- The encoding function `encode`:
 
-\begin{code}
+-- \begin{code}
 
-encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
-encode {Γ} {.ι}    Zero          = 0
-encode {Γ} {.ι}    (Succ t)      = 1 + encode t * #cons
-encode {Γ} {σ}     (Rec t t₁ t₂) = 2 + pair₃ (encode t , encode t₁ , encode t₂)
-encode {Γ} {σ}     (ν i)         = {!i * #cons!}
-encode {Γ} {σ ⇒ τ} (ƛ t)         = {!!}
-encode {Γ} {σ}     (t · t₁)      = {!!}
-encode {Γ} {.ι}    (Quote t)     = {!!}
-encode {Γ} {σ}     (Unquote t)   = {!!}
+-- encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
+-- encode {Γ} {.ι}    Zero          = 0
+-- encode {Γ} {.ι}    (Succ t)      = 1 + encode t * #cons
+-- encode {Γ} {σ}     (Rec t t₁ t₂) = 2 + pair₃ (encode t , encode t₁ , encode t₂)
+-- encode {Γ} {σ}     (ν i)         = {!i * #cons!}
+-- encode {Γ} {σ ⇒ τ} (ƛ t)         = {!!}
+-- encode {Γ} {σ}     (t · t₁)      = {!!}
+-- encode {Γ} {.ι}    (Quote t)     = {!!}
+-- encode {Γ} {σ}     (Unquote t)   = {!!}
 
---}
+-- --}
 
 \end{code}
