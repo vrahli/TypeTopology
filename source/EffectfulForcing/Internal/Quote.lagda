@@ -14,7 +14,7 @@ open import Naturals.Addition
  using (_+_; succ-right; sum-to-zero-gives-zero; addition-commutativity;
         zero-right-neutral; zero-left-neutral; succ-left; addition-associativity)
 open import Naturals.Multiplication
- using (_*_)
+ using (_*_; mult-left-id; mult-commutativity)
 open import Naturals.Properties using (positive-not-zero; ℕ-cases)
 open import EffectfulForcing.MFPSAndVariations.SystemT
  using (type ; ι ; _⇒_ ; 〖_〗)
@@ -357,6 +357,25 @@ pairing-spec x y = pairing-spec-aux (y + x) x y refl
 →＝+ₗ : {a b c : ℕ} → a ＝ b → a + c ＝ b + c
 →＝+ₗ {a} {b} {c} refl = refl
 
+m≤m*m : (n : ℕ) → n ≤ n * n
+m≤m*m zero     = ⋆
+m≤m*m (succ m) =
+ ≤-trans
+  (succ m)
+  (1 + 1 * m)
+  (succ m * succ m)
+  †
+  (multiplication-preserves-order 1 (succ m) (succ m) ⋆)
+   where
+    † : succ m ≤ 1 + 1 * m
+    † = transport
+         (λ - → succ m ≤ (1 + -))
+         (mult-left-id m ⁻¹)
+         (transport
+           (λ - → succ m ≤ -)
+           (addition-commutativity m 1)
+           (≤-refl m))
+
 \end{code}
 
 {--
@@ -393,12 +412,6 @@ pairing-spec2 x y = trans (sym (m*n/n＝m (pairing (x , y)) 2)) (trans h1 h2)
     h2 : (y * 2 + (y + x) * suc (y + x)) / 2 ＝ y + (y + x) * suc (y + x) / 2
     h2 rewrite *-suc (y + x) (y + x)
              | +-distrib-/-∣ʳ {y * 2} ((y + x) + (y + x) * (y + x)) {2} (2∣+* (y + x)) = h3
--}
-
-{-
-m≤m*m : (m : ℕ) → m ≤ m * m
-m≤m*m 0 = ≤-refl
-m≤m*m (suc m) = m≤m*n (suc m) (_≤_.s≤s _≤_.z≤n)
 -}
 
 {-
