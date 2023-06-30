@@ -334,14 +334,14 @@ pair-is-retract-of-unpair (succ n) with unpair＝ n
 pair-is-retract-of-unpair (succ n) | zero    , n₂ , p = lemma₁ n n₂ p
 pair-is-retract-of-unpair (succ n) | succ n₁ , n₂ , p = lemma₂ n n₁ n₂ p
 
-{--
-
 unpair-inj : (n m : ℕ) → unpair n ＝ unpair m → n ＝ m
 unpair-inj n m h =
- pair-is-retract-of-unpair' n ⁻¹ ∙ † ∙ (pair-is-retract-of-unpair' m)
+ pair-is-retract-of-unpair n ⁻¹ ∙ † ∙ (pair-is-retract-of-unpair m)
   where
    † : pair (unpair n) ＝ pair (unpair m)
    † = ap pair h
+
+{--
 
 +assoc-aux : (m n : ℕ) → m + m + (n + n) ＝ n + m + (n + m)
 +assoc-aux m n =
