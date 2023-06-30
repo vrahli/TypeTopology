@@ -446,28 +446,26 @@ pairing-non-dec x y
     h1 = →≤/2 x (y + x) (m≤n+m x y)
 -}
 
+\end{code}
+
+The encoding function `encode`:
+
+\begin{code}
+
 #cons : ℕ
 #cons = 8
 
 #cons-1 : ℕ
 #cons-1 = 7
 
-\end{code}
-
--- The encoding function `encode`:
-
--- \begin{code}
-
--- encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
--- encode {Γ} {.ι}    Zero          = 0
--- encode {Γ} {.ι}    (Succ t)      = 1 + encode t * #cons
--- encode {Γ} {σ}     (Rec t t₁ t₂) = 2 + pair₃ (encode t , encode t₁ , encode t₂)
--- encode {Γ} {σ}     (ν i)         = {!i * #cons!}
--- encode {Γ} {σ ⇒ τ} (ƛ t)         = {!!}
--- encode {Γ} {σ}     (t · t₁)      = {!!}
--- encode {Γ} {.ι}    (Quote t)     = {!!}
--- encode {Γ} {σ}     (Unquote t)   = {!!}
-
--- --}
+encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
+encode {Γ} {.ι}    Zero          = 0
+encode {Γ} {.ι}    (Succ t)      = 1 + encode t * #cons
+encode {Γ} {σ}     (Rec t t₁ t₂) = 2 + pair₃ (encode t , encode t₁ , encode t₂)
+encode {Γ} {σ}     (ν i)         = {!i * #cons!}
+encode {Γ} {σ ⇒ τ} (ƛ t)         = {!!}
+encode {Γ} {σ}     (t · t₁)      = {!!}
+encode {Γ} {.ι}    (Quote t)     = {!!}
+encode {Γ} {σ}     (Unquote t)   = {!!}
 
 \end{code}
