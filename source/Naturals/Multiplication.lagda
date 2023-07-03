@@ -312,3 +312,17 @@ succ-pred-multiplication x y = succ-pred' (succ x * succ y) γ ⁻¹
   γ = ℕ-positive-multiplication-not-zero x y
 
 \end{code}
+
+Added by Ayberk Tosun on the 3rd of July 2023.
+
+\begin{code}
+
+mult-by-2-is-self-sum : (n : ℕ) → 2 * n ＝ n + n
+mult-by-2-is-self-sum zero     = refl
+mult-by-2-is-self-sum (succ n) =
+ 2 * succ n            ＝⟨ mult-commutativity 2 (succ n) ⟩
+ succ n * succ 1       ＝⟨ refl ⟩
+ succ n + succ n * 1   ＝⟨ ap (succ n +_) (mult-right-id (succ n)) ⟩
+ succ n + succ n       ∎
+
+\end{code}
