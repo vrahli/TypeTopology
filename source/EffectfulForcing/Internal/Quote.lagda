@@ -14,10 +14,12 @@ open import Naturals.Addition
  using (_+_; succ-right; sum-to-zero-gives-zero; addition-commutativity;
         zero-right-neutral; zero-left-neutral; succ-left; addition-associativity)
 open import Naturals.Multiplication
- using (_*_; mult-left-id; mult-commutativity)
+ using (_*_; mult-left-id; mult-commutativity; distributivity-mult-over-addition;
+        mult-right-id; mult-by-2-is-self-sum)
 open import Naturals.Properties using (positive-not-zero; ℕ-cases)
 open import EffectfulForcing.MFPSAndVariations.SystemT
  using (type ; ι ; _⇒_ ; 〖_〗)
+open import Naturals.Division using (_∣_)
 open import UF.Base
 open import EffectfulForcing.Internal.SystemT
 open import UF.Base using (transport₂ ; transport₃ ; ap₂ ; ap₃)
@@ -378,12 +380,46 @@ m≤m*m (succ m) =
 
 \end{code}
 
+\begin{code}
+
+squaring-lemma : (n : ℕ) → succ n * succ n ＝ (n * n) + 2 * n + 1
+squaring-lemma n =
+ (n + 1) * (n + 1)                ＝⟨ Ⅰ ⟩
+ ((n + 1) * n) + (n + 1) * 1      ＝⟨ Ⅱ ⟩
+ n * (n + 1) + (n + 1) * 1        ＝⟨ Ⅲ ⟩
+ (n * n) + (n * 1) + (n + 1) * 1  ＝⟨ Ⅳ ⟩
+ (n * n) + n + (n + 1) * 1        ＝⟨ Ⅴ ⟩
+ (n * n) + n + (n + 1)            ＝⟨ Ⅵ ⟩
+ (n * n) + (n + (n + 1))          ＝⟨ Ⅶ ⟩
+ (n * n) + (n + n) + 1            ＝⟨ Ⅷ ⟩
+ (n * n) + (2 * n) + 1              ∎
+  where
+   Ⅰ = distributivity-mult-over-addition (n + 1) n 1
+   Ⅱ = ap (λ - → - + (n + 1) * 1) (mult-commutativity (n + 1) n)
+   Ⅲ = ap (λ - → - + (n + 1) * 1) (distributivity-mult-over-addition n n 1)
+   Ⅳ = ap (λ - → (n * n) + - + (n + 1) * 1) (mult-right-id n)
+   Ⅴ = ap (λ - → (n * n) + n + -) (mult-right-id (n + 1))
+   Ⅵ = addition-associativity (n * n) n (n + 1)
+   Ⅶ = ap ((n * n) +_) (addition-associativity n n 1)
+   Ⅷ = ap (λ - → (n * n) + - + 1) (mult-by-2-is-self-sum n ⁻¹)
+
+division-by-2-lemma : (n : ℕ) → 2 ∣ (n + n * n)
+division-by-2-lemma zero     = 0 , refl
+division-by-2-lemma (succ n) = k + n + 1 , †
+ where
+  IH : 2 ∣ n + n * n
+  IH = division-by-2-lemma n
+
+  k = pr₁ IH
+
+  † : 2 * (k + n + 1) ＝ succ n + succ n * succ n
+  † = 2 * (k + n + 1)                ＝⟨ {!!} ⟩
+      (2 * k) + (2 * n) + 2          ＝⟨ {!!} ⟩
+      (n + n * n) + (2 * n) + 2      ＝⟨ {!!} ⟩
+      (n + 1) + (n * n + 2 * n + 1)  ＝⟨ ap (λ - → succ n + -) (squaring-lemma n ⁻¹) ⟩
+      succ n + (succ n * succ n)     ∎
+
 {--
-
-
-{-
-2∣+* : (x : ℕ) → 2 ∣ (x + x * x)
-2∣+* 0 = divides 0 refl
 2∣+* (suc x)
   rewrite *-suc x x
         | +-suc x (x + (x + x * x))
@@ -397,7 +433,11 @@ m≤m*m (succ m) =
              | +0 z
              | +0 (x + z)
              | +-comm x z = +assoc-aux x z
--}
+--}
+
+\end{code}
+
+{--
 
 {-
 pairing-spec2 : (x y : ℕ) → pair (x , y) ＝ y + (y + x) * suc (y + x) / 2
