@@ -413,7 +413,7 @@ division-by-2-lemma (succ n) = k + n + 1 , †
   k = pr₁ IH
 
   † : 2 * (k + n + 1) ＝ succ n + succ n * succ n
-  † = 2 * (k + n + 1)                ＝⟨ {!!} ⟩
+  † = 2 * (k + n + 1)                ＝⟨ {!squaring-lemma!} ⟩
       (2 * k) + (2 * n) + 2          ＝⟨ {!!} ⟩
       (n + n * n) + (2 * n) + 2      ＝⟨ {!!} ⟩
       (n + 1) + (n * n + 2 * n + 1)  ＝⟨ ap (λ - → succ n + -) (squaring-lemma n ⁻¹) ⟩
@@ -498,14 +498,21 @@ The encoding function `encode`:
 #cons-1 : ℕ
 #cons-1 = 7
 
+encode-type : type → ℕ
+encode-type ι       = zero
+encode-type (σ ⇒ τ) = succ (pair (encode-type σ , encode-type τ))
+
+decode-type : ℕ → type
+decode-type n = {!_%_!}
+
 encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
-encode {Γ} {.ι}    Zero          = 0
-encode {Γ} {.ι}    (Succ t)      = 1 + encode t * #cons
-encode {Γ} {σ}     (Rec t t₁ t₂) = 2 + pair₃ (encode t , encode t₁ , encode t₂)
-encode {Γ} {σ}     (ν i)         = {!i * #cons!}
-encode {Γ} {σ ⇒ τ} (ƛ t)         = {!!}
-encode {Γ} {σ}     (t · t₁)      = {!!}
-encode {Γ} {.ι}    (Quote t)     = {!!}
-encode {Γ} {σ}     (Unquote t)   = {!!}
+encode {Γ} {ι} Zero = pair (encode-type ι , {!0!})
+encode {Γ} {.ι} (Succ t) = {!!}
+encode {Γ} {σ} (Rec t t₁ t₂) = {!!}
+encode {Γ} {σ} (ν x) = {!!}
+encode {Γ} {.(_ ⇒ _)} (ƛ t) = {!!}
+encode {Γ} {σ} (t · t₁) = {!!}
+encode {Γ} {.ι} (Quote t) = {!!}
+encode {Γ} {σ} (Unquote t) = {!!}
 
 \end{code}
