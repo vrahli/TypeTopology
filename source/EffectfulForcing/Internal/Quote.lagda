@@ -11,7 +11,7 @@ module EffectfulForcing.Internal.Quote where
 open import MLTT.Spartan hiding (rec ; _^_ ; _+_)
 open import Naturals.Order renaming (_≤ℕ_ to _≤_; _<ℕ_ to _<_)
 open import Naturals.Addition
- using (_+_; succ-right; sum-to-zero-gives-zero; addition-commutativity;
+ using (_+_; _+ᴸ_; succ-right; sum-to-zero-gives-zero; addition-commutativity;
         zero-right-neutral; zero-left-neutral; succ-left; addition-associativity)
 open import Naturals.Multiplication
  using (_*_; mult-left-id; mult-commutativity; distributivity-mult-over-addition;
@@ -594,18 +594,18 @@ From OpenTT
 
 \begin{code}
 
-comp-ind-ℕ-aux2 : (P : ℕ → Set)
-                → ((n : ℕ) → ((m : ℕ) → m < n → P m) → P n)
-                → (n m : ℕ) → m ≤ n → P m
-comp-ind-ℕ-aux2 P ind 0 0 z = ind 0 (λ m ())
-comp-ind-ℕ-aux2 P ind (succ n) 0 z = ind 0 (λ m ())
-comp-ind-ℕ-aux2 P ind (succ n) (succ m) z =
-  ind (succ m) (λ k h → comp-ind-ℕ-aux2 P ind n k (≤-trans k m n (succ-order-injective k m h) z))
+comp-ind-ℕ-aux : (P : ℕ → Set)
+               → ((n : ℕ) → ((m : ℕ) → m < n → P m) → P n)
+               → (n m : ℕ) → m ≤ n → P m
+comp-ind-ℕ-aux P ind 0 0 z = ind 0 (λ m ())
+comp-ind-ℕ-aux P ind (succ n) 0 z = ind 0 (λ m ())
+comp-ind-ℕ-aux P ind (succ n) (succ m) z =
+  ind (succ m) (λ k h → comp-ind-ℕ-aux P ind n k (≤-trans k m n (succ-order-injective k m h) z))
 
 comp-ind-ℕ : (P : ℕ → Set)
           → ((n : ℕ) → ((m : ℕ) → m < n → P m) → P n)
           → (n : ℕ) → P n
-comp-ind-ℕ P ind n = comp-ind-ℕ-aux2 P ind n n (≤-refl n)
+comp-ind-ℕ P ind n = comp-ind-ℕ-aux P ind n n (≤-refl n)
 
 succ-/≤ : (n m k : ℕ) → ¬ (n ＝ 0) → succ ((n - m) / (succ k)) ≤ n
 succ-/≤ n m k ¬n0 = {!!} --≤-trans (suc-/m n m) (suc/≤ n d0)
@@ -636,7 +636,7 @@ The encoding function `encode`:
 
 encode-type : type → ℕ
 encode-type ι       = 0
-encode-type (σ ⇒ τ) = succ (pair (encode-type σ , encode-type τ) * 2)
+encode-type (σ ⇒ τ) = 1 +ᴸ (pair (encode-type σ , encode-type τ) * #types)
 
 decode-type-aux : (n : ℕ) → ((m : ℕ) → m < n → type) → type
 decode-type-aux 0 ind = ι
@@ -662,9 +662,41 @@ decode-type-aux n@(succ z) ind with n % #types
 decode-type : ℕ → type
 decode-type = comp-ind-ℕ (λ _ → type) decode-type-aux
 
+decode-is-retraction-of-encode-⇒ : (σ τ : type)
+                                 → decode-type (encode-type σ) ＝ σ
+                                 → decode-type (encode-type τ) ＝ τ
+                                 → decode-type (1 +ᴸ (pair (encode-type σ , encode-type τ) * #types)) ＝ σ ⇒ τ
+decode-is-retraction-of-encode-⇒ σ τ hσ hτ =
+ decode-type (1 +ᴸ (pair (Eσ , Eτ) * #types))                  ＝⟨ refl ⟩
+ comp-ind-ℕ-aux (λ _ → type) decode-type-aux p1 p1 (≤-refl p1) ＝⟨ refl ⟩
+ decode-type-aux p1 (λ k h → comp-ind-ℕ-aux (λ _ → type) decode-type-aux p k (≤-trans k p p (succ-order-injective k p h) (≤-refl p1)))
+                                                               ＝⟨ {!!} ⟩
+ decode-type Eσ ⇒ decode-type Eτ                               ＝⟨ ap₂ _⇒_ hσ hτ ⟩
+ σ ⇒ τ ∎
+ where
+  Eσ : ℕ
+  Eσ = encode-type σ
+
+  Eτ : ℕ
+  Eτ = encode-type τ
+
+  p : ℕ
+  p = pair (Eσ , Eτ) * #types
+
+  p1 : ℕ
+  p1 = 1 +ᴸ p
+
+decode-type-is-retraction-of-encode-type : (σ : type) → decode-type (encode-type σ) ＝ σ
+decode-type-is-retraction-of-encode-type ι = refl
+decode-type-is-retraction-of-encode-type (σ ⇒ τ) =
+ decode-is-retraction-of-encode-⇒
+   σ τ
+   (decode-type-is-retraction-of-encode-type σ)
+   (decode-type-is-retraction-of-encode-type τ)
+
 encode-Cxt : Cxt → ℕ
 encode-Cxt 〈〉       = 0
-encode-Cxt (Γ ,, σ) = 1 + pair (encode-Cxt Γ , encode-type σ) * #cxts
+encode-Cxt (Γ ,, σ) = 1 +ᴸ pair (encode-Cxt Γ , encode-type σ) * #cxts
 
 decode-Cxt-aux : (n : ℕ) → ((m : ℕ) → m < n → Cxt) → Cxt
 decode-Cxt-aux 0 ind = 〈〉
@@ -685,13 +717,13 @@ decode-Cxt : ℕ → Cxt
 decode-Cxt = comp-ind-ℕ (λ _ → Cxt) decode-Cxt-aux
 
 encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
-encode {Γ} {ι} Zero          = 0 + encode-Cxt Γ * #terms
-encode {Γ} {ι} (Succ t)      = 1 + pair  (encode-Cxt Γ , encode t) * #terms
-encode {Γ} {σ} (Rec t t₁ t₂) = 2 + pair₅ (encode-Cxt Γ , encode-type σ , encode t , encode t₁ , encode t₂) * #terms
-encode {Γ} {σ} (ν x)         = 3 + pair₃ (encode-Cxt Γ , encode-type σ , {!!}) * #terms
-encode {Γ} {σ ⇒ τ} (ƛ t)     = 4 + pair₄ (encode-Cxt Γ , encode-type σ , encode-type τ , encode t) * #terms
-encode {Γ} {σ} (t · t₁)      = 5 + pair₄ (encode-Cxt Γ , encode-type σ , encode t , encode t₁) * #terms
-encode {Γ} {ι} (Quote t)     = 6 + pair  (encode-Cxt Γ , encode t) * #terms
-encode {Γ} {σ} (Unquote t)   = 7 + pair₃ (encode-Cxt Γ , encode-type σ , encode t) * #terms
+encode {Γ} {ι} Zero          = 0 +ᴸ encode-Cxt Γ * #terms
+encode {Γ} {ι} (Succ t)      = 1 +ᴸ pair  (encode-Cxt Γ , encode t) * #terms
+encode {Γ} {σ} (Rec t t₁ t₂) = 2 +ᴸ pair₅ (encode-Cxt Γ , encode-type σ , encode t , encode t₁ , encode t₂) * #terms
+encode {Γ} {σ} (ν x)         = 3 +ᴸ pair₃ (encode-Cxt Γ , encode-type σ , {!!}) * #terms
+encode {Γ} {σ ⇒ τ} (ƛ t)     = 4 +ᴸ pair₄ (encode-Cxt Γ , encode-type σ , encode-type τ , encode t) * #terms
+encode {Γ} {σ} (t · t₁)      = 5 +ᴸ pair₄ (encode-Cxt Γ , encode-type σ , encode t , encode t₁) * #terms
+encode {Γ} {ι} (Quote t)     = 6 +ᴸ pair  (encode-Cxt Γ , encode t) * #terms
+encode {Γ} {σ} (Unquote t)   = 7 +ᴸ pair₃ (encode-Cxt Γ , encode-type σ , encode t) * #terms
 
 \end{code}
