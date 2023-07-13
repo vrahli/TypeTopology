@@ -435,6 +435,25 @@ division-by-2-lemma (succ n) = k + n + 1 , †
              | +-comm x z = +assoc-aux x z
 --}
 
+unpair≤ : (n : ℕ)
+        → pr₁ (unpair n) ≤ n
+        × pr₂ (unpair n) ≤ n
+unpair≤ 0 = ≤-refl 0 , ≤-refl 0
+unpair≤ (succ n) = {!!}
+{-with unpairing≡ n
+... | suc x , y , p rewrite p =
+  ≤-trans (m<n⇒m≤1+n (≡→≤ (suc x) (proj₁ (unpairing n)) (sym (fst-unpairing≡ n (suc x) y p))))
+          (_≤_.s≤s (fst (unpairing≤ n))) ,
+  _≤_.s≤s (≤-trans (≡→≤ y (snd (unpairing n)) (sym (snd-unpairing≡ n (suc x) y p))) (snd (unpairing≤ n)))
+... | 0 , y , p rewrite p | sym (snd-unpairing≡ n 0 y p) = _≤_.s≤s (snd (unpairing≤ n)) , _≤_.z≤n
+-}
+
+π₁≤ : (n : ℕ) → π₁ n ≤ n
+π₁≤ n = pr₁ (unpair≤ n)
+
+π₂≤ : (n : ℕ) → π₂ n ≤ n
+π₂≤ n = pr₂ (unpair≤ n)
+
 \end{code}
 
 {--
@@ -488,6 +507,108 @@ pairing-non-dec x y
 
 \end{code}
 
+From the standard library
+
+\begin{code}
+
+data Reflects {p} (P : Set p) : 𝟚 → Set p where
+  ofʸ : ( p :   P) → Reflects P ₁
+  ofⁿ : (¬p : ¬ P) → Reflects P ₀
+
+record Dec {p} (P : Set p) : Set p where
+  constructor _because_
+  field
+    does  : 𝟚
+    proof : Reflects P does
+
+isYes : {P : Type} → Dec P → 𝟚
+isYes (₁ because _) = ₁
+isYes (₀ because _) = ₀
+
+isYes≗does : {P : Type} (P? : Dec P) → isYes P? ＝ Dec.does P?
+isYes≗does (₁ because _) = refl
+isYes≗does (₀ because _) = refl
+
+-- The traditional name for isYes is ⌊_⌋, indicating the stripping of evidence.
+⌊_⌋ = isYes
+
+not : 𝟚 → 𝟚
+not ₁ = ₀
+not ₀ = ₁
+
+isNo : {P : Type} → Dec P → 𝟚
+isNo = not ∘ isYes
+
+TRUE : 𝟚 → Type
+TRUE ₁ = 𝟙
+TRUE ₀ = 𝟘
+
+True : {P : Type} → Dec P → Set
+True Q = TRUE (isYes Q)
+
+False : {P : Type} → Dec P → Set
+False Q = TRUE (isNo Q)
+
+infix 4 _≟_
+_≟_ : (x y : ℕ) → Dec (x ＝ y)
+zero ≟ zero     = ₁ because ofʸ refl
+zero ≟ succ n   = ₀ because ofⁿ (λ ())
+succ m ≟ zero   = ₀ because ofⁿ (λ ())
+succ m ≟ succ n with m ≟ n
+... | ₁ because ofʸ p = ₁ because (ofʸ (ap succ p))
+... | ₀ because ofⁿ ¬p = ₀ because (ofⁿ (λ p → ¬p (succ-injective p)))
+
+mod-helper : (k m n j : ℕ) → ℕ
+mod-helper k m zero     j        = k
+mod-helper k m (succ n) 0        = mod-helper 0        m n m
+mod-helper k m (succ n) (succ j) = mod-helper (succ k) m n j
+
+div-helper : (k m n j : ℕ) → ℕ
+div-helper k m zero     j        = k
+div-helper k m (succ n) zero     = div-helper (succ k) m n m
+div-helper k m (succ n) (succ j) = div-helper k        m n j
+
+infixl 7 _%_
+_%_ : (dividend divisor : ℕ) {≢0 : False (divisor ≟ 0)} → ℕ
+m % (succ n) = mod-helper 0 n m n
+
+infixl 7 _/_
+_/_ : (dividend divisor : ℕ) {≢0 : False (divisor ≟ 0)} → ℕ
+m / (succ n) = div-helper 0 n m n
+
+infixl 6 _-_
+_-_ : ℕ → ℕ → ℕ
+n     - zero = n
+zero  - succ m = zero
+succ n - succ m = n - m
+
+<-transʳ : {a b c : ℕ} → a ≤ b → b < c → a < c
+<-transʳ {a} {b} {c} h1 h2 = {!!}
+
+\end{code}
+
+From OpenTT
+
+\begin{code}
+
+comp-ind-ℕ-aux2 : (P : ℕ → Set)
+                → ((n : ℕ) → ((m : ℕ) → m < n → P m) → P n)
+                → (n m : ℕ) → m ≤ n → P m
+comp-ind-ℕ-aux2 P ind 0 0 z = ind 0 (λ m ())
+comp-ind-ℕ-aux2 P ind (succ n) 0 z = ind 0 (λ m ())
+comp-ind-ℕ-aux2 P ind (succ n) (succ m) z =
+  ind (succ m) (λ k h → comp-ind-ℕ-aux2 P ind n k (≤-trans k m n (succ-order-injective k m h) z))
+
+comp-ind-ℕ : (P : ℕ → Set)
+          → ((n : ℕ) → ((m : ℕ) → m < n → P m) → P n)
+          → (n : ℕ) → P n
+comp-ind-ℕ P ind n = comp-ind-ℕ-aux2 P ind n n (≤-refl n)
+
+succ-/≤ : (n m k : ℕ) → ¬ (n ＝ 0) → succ ((n - m) / (succ k)) ≤ n
+succ-/≤ n m k ¬n0 = {!!} --≤-trans (suc-/m n m) (suc/≤ n d0)
+
+\end{code}
+
 The encoding function `encode`:
 
 \begin{code}
@@ -499,20 +620,42 @@ The encoding function `encode`:
 #cons-1 = 7
 
 encode-type : type → ℕ
-encode-type ι       = zero
-encode-type (σ ⇒ τ) = succ (pair (encode-type σ , encode-type τ))
+encode-type ι       = 0
+encode-type (σ ⇒ τ) = succ (pair (encode-type σ , encode-type τ) * 2)
+
+decode-type-aux : (n : ℕ) → ((m : ℕ) → m < n → type) → type
+decode-type-aux 0 ind = ι
+decode-type-aux n@(succ z) ind with n % 2 -- 2 is the number of type constructors
+... | 0 = ι
+... | succ _ = ind x₁ cx₁ ⇒ ind x₂ cx₂
+  where
+    m : ℕ
+    m = (n - 1) / 2
+
+    x₁ : ℕ
+    x₁ = π₁ m
+
+    cx₁ : x₁ < n
+    cx₁ = <-transʳ {x₁} {m} {n} (π₁≤ m) (succ-/≤ n 1 1 (λ ()))
+
+    x₂ : ℕ
+    x₂ = π₂ m
+
+    cx₂ : x₂ < n
+    cx₂ = <-transʳ {x₂} {m} {n} (π₂≤ m) (succ-/≤ n 1 1 (λ ()))
 
 decode-type : ℕ → type
-decode-type n = {!_%_!}
+decode-type = comp-ind-ℕ (λ _ → type) decode-type-aux
 
+-- Should we encode the context too?
 encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
-encode {Γ} {ι} Zero = pair (encode-type ι , {!0!})
-encode {Γ} {.ι} (Succ t) = {!!}
-encode {Γ} {σ} (Rec t t₁ t₂) = {!!}
-encode {Γ} {σ} (ν x) = {!!}
-encode {Γ} {.(_ ⇒ _)} (ƛ t) = {!!}
-encode {Γ} {σ} (t · t₁) = {!!}
-encode {Γ} {.ι} (Quote t) = {!!}
-encode {Γ} {σ} (Unquote t) = {!!}
+encode {Γ} {ι} Zero          = 0
+encode {Γ} {ι} (Succ t)      = 1 + encode t * #cons
+encode {Γ} {σ} (Rec t t₁ t₂) = 2 + pair₄ (encode-type σ , encode t , encode t₁ , encode t₂) * #cons
+encode {Γ} {σ} (ν x)         = 3 + pair (encode-type σ , {!!}) * #cons
+encode {Γ} {σ ⇒ τ} (ƛ t)     = 4 + pair₃ (encode-type σ , encode-type τ , encode t) * #cons
+encode {Γ} {σ} (t · t₁)      = 5 + pair₃ (encode-type σ , encode t , encode t₁) * #cons
+encode {Γ} {ι} (Quote t)     = 6 + encode t * #cons
+encode {Γ} {σ} (Unquote t)   = 7 + pair (encode-type σ , encode t) * #cons
 
 \end{code}
