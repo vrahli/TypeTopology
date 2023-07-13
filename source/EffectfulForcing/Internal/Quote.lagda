@@ -257,14 +257,14 @@ unpair-pairing-aux (x , succ y) (succ n) h with unpair-pairing-aux (succ x , y) 
 unpair-is-retraction-of-pair : (p : ℕ × ℕ) → unpair (pair p) ＝ p
 unpair-is-retraction-of-pair p = unpair-pairing-aux p (pair p) refl
 
-pairing→₁-pairing : (x₁ x₂ : ℕ) → π₁ (pair (x₁ , x₂)) ＝ x₁
-pairing→₁-pairing x₁ x₂ = ap pr₁ (unpair-is-retraction-of-pair (x₁ , x₂))
+π₁-pair : (x₁ x₂ : ℕ) → π₁ (pair (x₁ , x₂)) ＝ x₁
+π₁-pair x₁ x₂ = ap pr₁ (unpair-is-retraction-of-pair (x₁ , x₂))
 
 ＝pairing→₁ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → π₁ x₁ ＝ π₁ x₂
 ＝pairing→₁ {x₁} {x₂} refl = refl
 
-pairing→₂-pairing : (x₁ x₂ : ℕ) → π₂ (pair (x₁ , x₂)) ＝ x₂
-pairing→₂-pairing x₁ x₂ = ap pr₂ (unpair-is-retraction-of-pair (x₁ , x₂))
+π₂-pair : (x₁ x₂ : ℕ) → π₂ (pair (x₁ , x₂)) ＝ x₂
+π₂-pair x₁ x₂ = ap pr₂ (unpair-is-retraction-of-pair (x₁ , x₂))
 
 ＝pairing→₂ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → π₂ x₁ ＝ π₂ x₂
 ＝pairing→₂ {x₁} {x₂} refl = refl
@@ -586,7 +586,7 @@ zero  - succ m = zero
 succ n - succ m = n - m
 
 <-transʳ : {a b c : ℕ} → a ≤ b → b < c → a < c
-<-transʳ {a} {b} {c} h1 h2 = {!!}
+<-transʳ {a} {b} {c} h1 h2 = ≤-trans (succ a) (succ b) c h1 h2
 
 \end{code}
 
@@ -609,6 +609,24 @@ comp-ind-ℕ P ind n = comp-ind-ℕ-aux P ind n n (≤-refl n)
 
 succ-/≤ : (n m k : ℕ) → ¬ (n ＝ 0) → succ ((n - m) / (succ k)) ≤ n
 succ-/≤ n m k ¬n0 = {!!} --≤-trans (suc-/m n m) (suc/≤ n d0)
+
+{-
+[m+kn]%n≡m%n : ∀ m k n → (m + k * (succ n)) % succ n ＝ m % succ n
+[m+kn]%n≡m%n m zero    n-1 = ap (_% succ n-1) {!!} --(+-identityʳ m)
+[m+kn]%n≡m%n m (succ k) n-1 = {!!} {-
+  (m + (n + k * n)) % n ＝⟨ ap (_% n) ? {-((+-assoc m n (k * n)) ⁻¹)-} ⟩
+  (m + n + k * n)   % n ＝⟨ ? {-[m+kn]%n≡m%n (m + n) k n-1-} ⟩
+  (m + n)           % n ＝⟨ ? {-[m+n]%n≡m%n m n-1-} ⟩
+  m                 % n ∎
+  where n = succ n-1
+-}
+-}
+
+*%≡k : (k x n : ℕ) → k ≤ n → (k +ᴸ (x * (succ n))) % (succ n) ＝ k
+*%≡k k x n cond = {!!} --([m+kn]%n≡m%n k x n) ∙ {!!} -- (m≤n⇒m%n≡m (s≤s-inj cond))
+
+m*sn/sn≡m : (m n : ℕ) → (m * succ n / succ n) ＝ m
+m*sn/sn≡m m n = {!!} --m*n/n≡m m (suc n)
 
 \end{code}
 
@@ -638,14 +656,15 @@ encode-type : type → ℕ
 encode-type ι       = 0
 encode-type (σ ⇒ τ) = 1 +ᴸ (pair (encode-type σ , encode-type τ) * #types)
 
-decode-type-aux : (n : ℕ) → ((m : ℕ) → m < n → type) → type
-decode-type-aux 0 ind = ι
-decode-type-aux n@(succ z) ind with n % #types
-... | 0 = ι
-... | succ _ = ind x₁ cx₁ ⇒ ind x₂ cx₂
+decode-type-aux-aux : (d : ℕ) (z : ℕ) → ((m : ℕ) → m < succ z → type) → type
+decode-type-aux-aux 0 z ind = ι
+decode-type-aux-aux (succ _) z ind = ind x₁ cx₁ ⇒ ind x₂ cx₂
   where
+    n : ℕ
+    n = succ z
+
     m : ℕ
-    m = (n - 1) / #types
+    m = z / #types
 
     x₁ : ℕ
     x₁ = π₁ m
@@ -659,8 +678,53 @@ decode-type-aux n@(succ z) ind with n % #types
     cx₂ : x₂ < n
     cx₂ = <-transʳ {x₂} {m} {n} (π₂≤ m) (succ-/≤ n 1 #types-1 (λ ()))
 
+decode-type-aux : (n : ℕ) → ((m : ℕ) → m < n → type) → type
+decode-type-aux 0 ind = ι
+decode-type-aux n@(succ z) ind = decode-type-aux-aux (n % #types) z ind
+
 decode-type : ℕ → type
 decode-type = comp-ind-ℕ (λ _ → type) decode-type-aux
+
+＝decode-type-aux-aux : (d : ℕ) (z : ℕ) → (f g : (m : ℕ) → m < succ z → type)
+                      → ((m : ℕ) (p q : m < succ z) → f m p ＝ g m q)
+                      → decode-type-aux-aux d z f ＝ decode-type-aux-aux d z g
+＝decode-type-aux-aux zero z f g i = refl
+＝decode-type-aux-aux (succ d) z f g i = ap₂ _⇒_ (i _ _ _) (i _ _ _)
+
+＝decode-type-aux : (z : ℕ) → (f g : (m : ℕ) → m < z → type)
+                  → ((m : ℕ) (p q : m < z) → f m p ＝ g m q)
+                  → decode-type-aux z f ＝ decode-type-aux z g
+＝decode-type-aux 0 f g i = refl
+＝decode-type-aux (succ w) f g i = ＝decode-type-aux-aux _ _ _ _ i
+
+＝comp-ind-ℕ-aux : (P : ℕ → Set) (ind : (n : ℕ) → ((m : ℕ) → m < n → P m) → P n) (n1 n2 m : ℕ) (p : m ≤ n1) (q : m ≤ n2)
+                 → ((n : ℕ) (i j : (m : ℕ) → m < n → P m) → ((m : ℕ) (u v : m < n) → i m u ＝ j m v) → ind n i ＝ ind n j)
+                 → comp-ind-ℕ-aux P ind n1 m p ＝ comp-ind-ℕ-aux P ind n2 m q
+＝comp-ind-ℕ-aux P ind zero zero zero p q ii = refl
+＝comp-ind-ℕ-aux P ind zero (succ n2) zero p q ii = refl
+＝comp-ind-ℕ-aux P ind (succ n1) zero zero p q ii = refl
+＝comp-ind-ℕ-aux P ind (succ n1) (succ n2) zero p q ii = refl
+＝comp-ind-ℕ-aux P ind (succ n1) (succ n2) (succ m) p q ii =
+  ii _ _ _ (λ k u v → ＝comp-ind-ℕ-aux P ind n1 n2 k
+                                       (≤-trans k m n1 (succ-order-injective k m u) p)
+                                       (≤-trans k m n2 (succ-order-injective k m v) q)
+                                       ii)
+
+comp-ind-ℕ-aux≡decode-type : {n m : ℕ} (p : m ≤ n)
+                            → comp-ind-ℕ-aux (λ _ → type) decode-type-aux n m p ＝ decode-type m
+comp-ind-ℕ-aux≡decode-type {zero} {zero} p = refl
+comp-ind-ℕ-aux≡decode-type {succ n} {zero} p = refl
+comp-ind-ℕ-aux≡decode-type {succ n} {succ m} p =
+ decode-type-aux-aux (succ m % #types) m f
+ ＝⟨ ＝decode-type-aux-aux (succ m % #types) m f g e ⟩ decode-type-aux-aux (succ m % #types) m g
+ ＝⟨ refl ⟩ comp-ind-ℕ-aux (λ _ → type) decode-type-aux (succ m) (succ m) (≤-refl (succ m)) ∎
+ where
+  f = λ k h → comp-ind-ℕ-aux (λ _ → type) decode-type-aux n k (≤-trans k m n h p)
+  g = λ k h → comp-ind-ℕ-aux (λ _ → type) decode-type-aux m k (≤-trans k m m (succ-order-injective k m h) (≤-refl (succ m)))
+
+  e : (k : ℕ) (q1 q2 : k < succ m) → f k q1 ＝ g k q2
+  e k q1 q2 = ＝comp-ind-ℕ-aux (λ _ → type) decode-type-aux n m k _ _
+                               (λ z i j ii → ＝decode-type-aux z _ _ ii)
 
 decode-is-retraction-of-encode-⇒ : (σ τ : type)
                                  → decode-type (encode-type σ) ＝ σ
@@ -669,8 +733,12 @@ decode-is-retraction-of-encode-⇒ : (σ τ : type)
 decode-is-retraction-of-encode-⇒ σ τ hσ hτ =
  decode-type (1 +ᴸ (pair (Eσ , Eτ) * #types))                  ＝⟨ refl ⟩
  comp-ind-ℕ-aux (λ _ → type) decode-type-aux p1 p1 (≤-refl p1) ＝⟨ refl ⟩
- decode-type-aux p1 (λ k h → comp-ind-ℕ-aux (λ _ → type) decode-type-aux p k (≤-trans k p p (succ-order-injective k p h) (≤-refl p1)))
-                                                               ＝⟨ {!!} ⟩
+ decode-type-aux p1 r                                          ＝⟨ refl ⟩
+ decode-type-aux-aux (p1 % #types) p r                         ＝⟨ ap (λ k → decode-type-aux-aux k p r) (*%≡k 1 (pair (Eσ , Eτ)) 1 ⋆) ⟩
+ decode-type-aux-aux 1 p r                                     ＝⟨ refl ⟩
+ r (π₁ (p / #types)) cx₁ ⇒ r (π₂ (p / #types)) cx₂             ＝⟨ ap₂ _⇒_ (comp-ind-ℕ-aux≡decode-type {p} {π₁ (p / #types)} (≤-trans (π₁ (p / #types)) p p (succ-order-injective (π₁ (p / #types)) p cx₁) (≤-refl p1))) (comp-ind-ℕ-aux≡decode-type {p} {π₂ (p / #types)} (≤-trans (π₂ (p / #types)) p p (succ-order-injective (π₂ (p / #types)) p cx₂) (≤-refl p))) ⟩
+ decode-type (π₁ (p / #types)) ⇒ decode-type (π₂ (p / #types)) ＝⟨ ap₂ _⇒_ (ap (λ k → decode-type (π₁ k)) ((m*sn/sn≡m pE #types-1))) (ap (λ k → decode-type (π₂ k)) ((m*sn/sn≡m pE #types-1))) ⟩
+ decode-type (π₁ pE) ⇒ decode-type (π₂ pE)                     ＝⟨ ap₂ _⇒_ (ap decode-type (π₁-pair Eσ Eτ)) (ap decode-type (π₂-pair Eσ Eτ)) ⟩
  decode-type Eσ ⇒ decode-type Eτ                               ＝⟨ ap₂ _⇒_ hσ hτ ⟩
  σ ⇒ τ ∎
  where
@@ -680,11 +748,22 @@ decode-is-retraction-of-encode-⇒ σ τ hσ hτ =
   Eτ : ℕ
   Eτ = encode-type τ
 
+  pE : ℕ
+  pE = pair (Eσ , Eτ)
+
   p : ℕ
-  p = pair (Eσ , Eτ) * #types
+  p = pE * #types
 
   p1 : ℕ
   p1 = 1 +ᴸ p
+
+  r = λ k h → comp-ind-ℕ-aux (λ _ → type) decode-type-aux p k (≤-trans k p p (succ-order-injective k p h) (≤-refl p1))
+
+  cx₁ : π₁ (p / #types) < p1
+  cx₁ = <-transʳ {π₁ (p / #types)} {p / #types} {p1} (π₁≤ (p / #types)) (succ-/≤ p1 1 #types-1 (λ ()))
+
+  cx₂ : π₂ (p / #types) < p1
+  cx₂ = <-transʳ {π₂ (p / #types)} {p / #types} {p1} (π₂≤ (p / #types)) (succ-/≤ p1 1 #types-1 (λ ()))
 
 decode-type-is-retraction-of-encode-type : (σ : type) → decode-type (encode-type σ) ＝ σ
 decode-type-is-retraction-of-encode-type ι = refl
