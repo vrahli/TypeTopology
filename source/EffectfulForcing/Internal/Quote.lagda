@@ -104,6 +104,9 @@ pair₃ (x , y , z) = pair (x , pair (y , z))
 pair₄ : ℕ × ℕ × ℕ × ℕ → ℕ
 pair₄ (x , y , z , w) = pair (x , pair₃ (y , z , w))
 
+pair₅ : ℕ × ℕ × ℕ × ℕ × ℕ → ℕ
+pair₅ (x , y , z , w , v) = pair (x , pair₄ (y , z , w , v))
+
 \end{code}
 
 The unpairing function `unpair`:
@@ -613,11 +616,23 @@ The encoding function `encode`:
 
 \begin{code}
 
-#cons : ℕ
-#cons = 8
+#terms : ℕ
+#terms = 8
 
-#cons-1 : ℕ
-#cons-1 = 7
+#terms-1 : ℕ
+#terms-1 = #terms - 1
+
+#types : ℕ
+#types = 2
+
+#types-1 : ℕ
+#types-1 = #types - 1
+
+#cxts : ℕ
+#cxts = 2
+
+#cxts-1 : ℕ
+#cxts-1 = #cxts - 1
 
 encode-type : type → ℕ
 encode-type ι       = 0
@@ -625,37 +640,58 @@ encode-type (σ ⇒ τ) = succ (pair (encode-type σ , encode-type τ) * 2)
 
 decode-type-aux : (n : ℕ) → ((m : ℕ) → m < n → type) → type
 decode-type-aux 0 ind = ι
-decode-type-aux n@(succ z) ind with n % 2 -- 2 is the number of type constructors
+decode-type-aux n@(succ z) ind with n % #types
 ... | 0 = ι
 ... | succ _ = ind x₁ cx₁ ⇒ ind x₂ cx₂
   where
     m : ℕ
-    m = (n - 1) / 2
+    m = (n - 1) / #types
 
     x₁ : ℕ
     x₁ = π₁ m
 
     cx₁ : x₁ < n
-    cx₁ = <-transʳ {x₁} {m} {n} (π₁≤ m) (succ-/≤ n 1 1 (λ ()))
+    cx₁ = <-transʳ {x₁} {m} {n} (π₁≤ m) (succ-/≤ n 1 #types-1 (λ ()))
 
     x₂ : ℕ
     x₂ = π₂ m
 
     cx₂ : x₂ < n
-    cx₂ = <-transʳ {x₂} {m} {n} (π₂≤ m) (succ-/≤ n 1 1 (λ ()))
+    cx₂ = <-transʳ {x₂} {m} {n} (π₂≤ m) (succ-/≤ n 1 #types-1 (λ ()))
 
 decode-type : ℕ → type
 decode-type = comp-ind-ℕ (λ _ → type) decode-type-aux
 
--- Should we encode the context too?
+encode-Cxt : Cxt → ℕ
+encode-Cxt 〈〉       = 0
+encode-Cxt (Γ ,, σ) = 1 + pair (encode-Cxt Γ , encode-type σ) * #cxts
+
+decode-Cxt-aux : (n : ℕ) → ((m : ℕ) → m < n → Cxt) → Cxt
+decode-Cxt-aux 0 ind = 〈〉
+decode-Cxt-aux n@(succ z) ind with n % #cxts
+... | 0 = 〈〉
+... | succ _ = ind x₁ cx₁ ,, decode-type (π₂ m)
+  where
+    m : ℕ
+    m = (n - 1) / #cxts
+
+    x₁ : ℕ
+    x₁ = π₁ m
+
+    cx₁ : x₁ < n
+    cx₁ = <-transʳ {x₁} {m} {n} (π₁≤ m) (succ-/≤ n 1 #cxts-1 (λ ()))
+
+decode-Cxt : ℕ → Cxt
+decode-Cxt = comp-ind-ℕ (λ _ → Cxt) decode-Cxt-aux
+
 encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
-encode {Γ} {ι} Zero          = 0
-encode {Γ} {ι} (Succ t)      = 1 + encode t * #cons
-encode {Γ} {σ} (Rec t t₁ t₂) = 2 + pair₄ (encode-type σ , encode t , encode t₁ , encode t₂) * #cons
-encode {Γ} {σ} (ν x)         = 3 + pair (encode-type σ , {!!}) * #cons
-encode {Γ} {σ ⇒ τ} (ƛ t)     = 4 + pair₃ (encode-type σ , encode-type τ , encode t) * #cons
-encode {Γ} {σ} (t · t₁)      = 5 + pair₃ (encode-type σ , encode t , encode t₁) * #cons
-encode {Γ} {ι} (Quote t)     = 6 + encode t * #cons
-encode {Γ} {σ} (Unquote t)   = 7 + pair (encode-type σ , encode t) * #cons
+encode {Γ} {ι} Zero          = 0 + encode-Cxt Γ * #terms
+encode {Γ} {ι} (Succ t)      = 1 + pair  (encode-Cxt Γ , encode t) * #terms
+encode {Γ} {σ} (Rec t t₁ t₂) = 2 + pair₅ (encode-Cxt Γ , encode-type σ , encode t , encode t₁ , encode t₂) * #terms
+encode {Γ} {σ} (ν x)         = 3 + pair₃ (encode-Cxt Γ , encode-type σ , {!!}) * #terms
+encode {Γ} {σ ⇒ τ} (ƛ t)     = 4 + pair₄ (encode-Cxt Γ , encode-type σ , encode-type τ , encode t) * #terms
+encode {Γ} {σ} (t · t₁)      = 5 + pair₄ (encode-Cxt Γ , encode-type σ , encode t , encode t₁) * #terms
+encode {Γ} {ι} (Quote t)     = 6 + pair  (encode-Cxt Γ , encode t) * #terms
+encode {Γ} {σ} (Unquote t)   = 7 + pair₃ (encode-Cxt Γ , encode-type σ , encode t) * #terms
 
 \end{code}
