@@ -19,9 +19,11 @@ open import Naturals.Multiplication
 open import Naturals.Properties using (positive-not-zero; ℕ-cases)
 open import EffectfulForcing.MFPSAndVariations.SystemT
  using (type ; ι ; _⇒_ ; 〖_〗)
+open import EffectfulForcing.MFPSAndVariations.Combinators
 open import Naturals.Division using (_∣_)
 open import UF.Base
 open import EffectfulForcing.Internal.SystemT
+open import EffectfulForcing.Internal.Subst using (dec-type)
 open import UF.Base using (transport₂ ; transport₃ ; ap₂ ; ap₃)
 
 \end{code}
@@ -796,13 +798,51 @@ decode-Cxt : ℕ → Cxt
 decode-Cxt = comp-ind-ℕ (λ _ → Cxt) decode-Cxt-aux
 
 encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
-encode {Γ} {ι} Zero          = 0 +ᴸ encode-Cxt Γ * #terms
-encode {Γ} {ι} (Succ t)      = 1 +ᴸ pair  (encode-Cxt Γ , encode t) * #terms
-encode {Γ} {σ} (Rec t t₁ t₂) = 2 +ᴸ pair₅ (encode-Cxt Γ , encode-type σ , encode t , encode t₁ , encode t₂) * #terms
-encode {Γ} {σ} (ν x)         = 3 +ᴸ pair₃ (encode-Cxt Γ , encode-type σ , {!!}) * #terms
-encode {Γ} {σ ⇒ τ} (ƛ t)     = 4 +ᴸ pair₄ (encode-Cxt Γ , encode-type σ , encode-type τ , encode t) * #terms
-encode {Γ} {σ} (t · t₁)      = 5 +ᴸ pair₄ (encode-Cxt Γ , encode-type σ , encode t , encode t₁) * #terms
-encode {Γ} {ι} (Quote t)     = 6 +ᴸ pair  (encode-Cxt Γ , encode t) * #terms
-encode {Γ} {σ} (Unquote t)   = 7 +ᴸ pair₃ (encode-Cxt Γ , encode-type σ , encode t) * #terms
+encode {Γ} {ι} Zero          = 0
+encode {Γ} {ι} (Succ t)      = 1 +ᴸ encode t * #terms
+encode {Γ} {σ} (Rec t t₁ t₂) = 2 +ᴸ pair₄ (encode-type σ , encode t , encode t₁ , encode t₂) * #terms
+encode {Γ} {σ} (ν x)         = 3 +ᴸ pair  (encode-type σ , {!!}) * #terms
+encode {Γ} {σ ⇒ τ} (ƛ t)     = 4 +ᴸ pair₃ (encode-type σ , encode-type τ , encode t) * #terms
+encode {Γ} {σ} (t · t₁)      = 5 +ᴸ pair₃ (encode-type σ , encode t , encode t₁) * #terms
+encode {Γ} {ι} (Quote t)     = 6 +ᴸ encode t * #terms
+encode {Γ} {σ} (Unquote t)   = 7 +ᴸ pair  (encode-type σ , encode t) * #terms
+
+record QTσ (Γ : Cxt) : 𝓤₀ ̇  where
+ constructor qtσ
+ field
+  QTσ-σ : type
+  QTσ-t : QT Γ QTσ-σ
+
+{-
+decode-aux : (n : ℕ) → ((m : ℕ) → m < n → ΣQT) → ΣQT
+decode-aux 0 ind = Zero
+decode-aux n@(succ z) ind = ? --decode-aux-aux (n % #types) z ind
+-}
+
+decode : (Γ : Cxt) → ℕ → QTσ Γ
+decode Γ = comp-ind-ℕ (λ _ → QTσ Γ) {!!} --decode-type-aux
+
+Q⟦_⟧ : {Γ : Cxt} {σ : type} → QT Γ σ → 【 Γ 】 → 〖 σ 〗
+Q⟦ Zero      ⟧  _ = 0
+Q⟦ Succ t    ⟧ xs = succ (Q⟦ t ⟧ xs)
+Q⟦ Rec f g t ⟧ xs = rec (Q⟦ f ⟧ xs) (Q⟦ g ⟧ xs) (Q⟦ t ⟧ xs)
+Q⟦ ν i       ⟧ xs = xs i
+Q⟦ ƛ t       ⟧ xs = λ x → Q⟦ t ⟧ (xs ‚ x)
+Q⟦ t · u     ⟧ xs = Q⟦ t ⟧ xs (Q⟦ u ⟧ xs)
+Q⟦ Quote t   ⟧ xs = encode t
+Q⟦_⟧ {Γ} {σ} (Unquote t) xs = c
+ where
+  n : ℕ
+  n = Q⟦ t ⟧ xs
+
+  s : QTσ Γ
+  s = decode Γ n
+
+  -- One problem is that σ might not be t's type:
+  c : 〖 σ 〗
+  c with dec-type σ (QTσ.QTσ-σ s)
+  ... | inl refl = {!Q⟦ QTσ.QTσ-t s ⟧ xs!} -- This wouldn't terminate...
+                                            -- Should we instead allow quoting & unquoting T terms?
+  ... | inr x = {!!} -- return a default value?
 
 \end{code}
