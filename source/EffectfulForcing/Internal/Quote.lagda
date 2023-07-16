@@ -28,9 +28,33 @@ open import UF.Base using (transport₂ ; transport₃ ; ap₂ ; ap₃)
 
 \end{code}
 
+Boolean ∧
+
+\begin{code}
+
+
+_∧_ : 𝟚 → 𝟚 → 𝟚
+₁ ∧ b = b
+₀ ∧ b = ₀
+
+infixr 6 _∧_
+
+\end{code}
+
 System T with quoting.
 
 \begin{code}
+
+-- The Boolean is to differentiate 2 universe, where ₁ is the universe without quoting, i.e., System T.
+data QT' : (b : 𝟚) (Γ : Cxt) (σ : type) → 𝓤₀ ̇  where
+ Zero    : {b        : 𝟚} {Γ : Cxt}              → QT' b Γ ι
+ Succ    : {b        : 𝟚} {Γ : Cxt}              → QT' b Γ ι → QT' b Γ ι
+ Rec     : {b₁ b₂ b₃ : 𝟚} {Γ : Cxt} {σ   : type} → QT' b₁ Γ (ι ⇒ σ ⇒ σ) → QT' b₂ Γ σ → QT' b₃ Γ ι → QT' (b₁ ∧ b₂ ∧ b₃) Γ σ
+ ν       : {b        : 𝟚} {Γ : Cxt} {σ   : type} → ∈Cxt σ Γ  → QT' b Γ σ
+ ƛ       : {b        : 𝟚} {Γ : Cxt} {σ τ : type} → QT' b (Γ ,, σ) τ → QT' b Γ (σ ⇒ τ)
+ _·_     : {b₁ b₂    : 𝟚} {Γ : Cxt} {σ τ : type} → QT' b₂ Γ (σ ⇒ τ) → QT' b₂ Γ σ → QT' (b₁ ∧ b₂) Γ τ
+ Quote   : {b        : 𝟚} {Γ : Cxt} {σ   : type} → QT' b Γ σ → QT' ₀ Γ ι
+ Unquote : {b        : 𝟚} {Γ : Cxt} {σ   : type} → QT' b Γ ι → QT' ₀ Γ σ
 
 data QT : (Γ : Cxt) (σ : type) → 𝓤₀ ̇  where
  Zero    : {Γ : Cxt}              → QT Γ ι
@@ -45,12 +69,6 @@ data QT : (Γ : Cxt) (σ : type) → 𝓤₀ ̇  where
 \end{code}
 
 \begin{code}
-
-_∧_ : 𝟚 → 𝟚 → 𝟚
-₁ ∧ b = b
-₀ ∧ b = ₀
-
-infixr 6 _∧_
 
 succ-injective : ∀ {m n} → succ m ＝ succ n → m ＝ n
 succ-injective refl = refl
@@ -658,6 +676,7 @@ encode-type : type → ℕ
 encode-type ι       = 0
 encode-type (σ ⇒ τ) = 1 +ᴸ (pair (encode-type σ , encode-type τ) * #types)
 
+-- d is n % #types, i.e. (succ z) % #types
 decode-type-aux-aux : (d : ℕ) (z : ℕ) → ((m : ℕ) → m < succ z → type) → type
 decode-type-aux-aux 0 z ind = ι
 decode-type-aux-aux (succ _) z ind = ind x₁ cx₁ ⇒ ind x₂ cx₂
@@ -666,7 +685,7 @@ decode-type-aux-aux (succ _) z ind = ind x₁ cx₁ ⇒ ind x₂ cx₂
     n = succ z
 
     m : ℕ
-    m = z / #types
+    m = (n - 1) / #types
 
     x₁ : ℕ
     x₁ = π₁ m
@@ -807,20 +826,46 @@ encode {Γ} {σ} (t · t₁)      = 5 +ᴸ pair₃ (encode-type σ , encode t , 
 encode {Γ} {ι} (Quote t)     = 6 +ᴸ encode t * #terms
 encode {Γ} {σ} (Unquote t)   = 7 +ᴸ pair  (encode-type σ , encode t) * #terms
 
-record QTσ (Γ : Cxt) : 𝓤₀ ̇  where
- constructor qtσ
+record Tσ (Γ : Cxt) : 𝓤₀ ̇  where
+ constructor tσ
  field
-  QTσ-σ : type
-  QTσ-t : QT Γ QTσ-σ
+  Tσ-σ : type
+  Tσ-t : T Γ Tσ-σ
 
-{-
-decode-aux : (n : ℕ) → ((m : ℕ) → m < n → ΣQT) → ΣQT
-decode-aux 0 ind = Zero
-decode-aux n@(succ z) ind = ? --decode-aux-aux (n % #types) z ind
--}
+-- default terms of type σ
+σ→T : (Γ : Cxt) (σ : type) → T Γ σ
+σ→T Γ ι = Zero
+σ→T Γ (σ ⇒ τ) = ƛ (σ→T (Γ ,, σ) τ)
 
-decode : (Γ : Cxt) → ℕ → QTσ Γ
-decode Γ = comp-ind-ℕ (λ _ → QTσ Γ) {!!} --decode-type-aux
+Tσ→T : {Γ : Cxt} (σ : type) (t : Tσ Γ) → T Γ σ
+Tσ→T {Γ} σ (tσ τ t) with dec-type σ τ
+... | inl refl = t
+... | inr _ = σ→T Γ σ
+
+-- d is n % #terms, i.e. (succ z) % #terms
+decode-aux-aux : (d : ℕ) (z : ℕ) → ((m : ℕ) → m < succ z → {Γ : Cxt} → Tσ Γ) → {Γ : Cxt} → Tσ Γ
+-- Zero
+decode-aux-aux 0 z ind {Γ} = tσ ι Zero
+-- Succ
+decode-aux-aux 1 z ind {Γ} = tσ ι (Succ (Tσ→T ι i))
+  where
+    n : ℕ
+    n = succ z
+
+    m : ℕ
+    m = (n - 1) / #terms
+
+    i : Tσ Γ
+    i = ind m (succ-/≤ n 1 #terms-1 (λ ())) {Γ}
+--
+decode-aux-aux (succ (succ _)) z ind {Γ} = {!!}
+
+decode-aux : (n : ℕ) → ((m : ℕ) → m < n → {Γ : Cxt} → Tσ Γ) → {Γ : Cxt} → Tσ Γ
+decode-aux 0 ind {Γ} = tσ ι Zero
+decode-aux n@(succ z) ind {Γ} = decode-aux-aux (n % #terms) z ind
+
+decode : ℕ → {Γ : Cxt} → Tσ Γ
+decode = comp-ind-ℕ (λ _ → {Γ : Cxt} → Tσ Γ) decode-aux
 
 Q⟦_⟧ : {Γ : Cxt} {σ : type} → QT Γ σ → 【 Γ 】 → 〖 σ 〗
 Q⟦ Zero      ⟧  _ = 0
@@ -835,14 +880,12 @@ Q⟦_⟧ {Γ} {σ} (Unquote t) xs = c
   n : ℕ
   n = Q⟦ t ⟧ xs
 
-  s : QTσ Γ
-  s = decode Γ n
+  s : Tσ Γ
+  s = decode n {Γ}
 
   -- One problem is that σ might not be t's type:
   c : 〖 σ 〗
-  c with dec-type σ (QTσ.QTσ-σ s)
-  ... | inl refl = {!Q⟦ QTσ.QTσ-t s ⟧ xs!} -- This wouldn't terminate...
-                                            -- Should we instead allow quoting & unquoting T terms?
-  ... | inr x = {!!} -- return a default value?
+  c = ⟦ Tσ→T σ s ⟧ xs -- This wouldn't terminate if decode was returning a QT
+                      -- Should we instead allow quoting & unquoting T terms?
 
 \end{code}
