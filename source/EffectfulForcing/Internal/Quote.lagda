@@ -179,7 +179,7 @@ The second projection for a triple.
 \begin{code}
 
 π3₂ : (n : ℕ) → ℕ
-π3₂ n = pr₁ (unpair (pr₂ (unpair n)))
+π3₂ = π₁ ∘ π₂
 
 \end{code}
 
@@ -187,8 +187,44 @@ The third projection from a triple.
 
 \begin{code}
 
-pairing3→₃ : (n : ℕ) → ℕ
-pairing3→₃ n = pr₂ (unpair (pr₂ (unpair n)))
+π3₃ : (n : ℕ) → ℕ
+π3₃ = π₂ ∘ π₂
+
+\end{code}
+
+The first projection of a quadruple.
+
+\begin{code}
+
+π4₁ : ℕ → ℕ
+π4₁ = π₁
+
+\end{code}
+
+The second projection for a quadruple.
+
+\begin{code}
+
+π4₂ : (n : ℕ) → ℕ
+π4₂ = π₁ ∘ π₂
+
+\end{code}
+
+The third projection from a quadruple.
+
+\begin{code}
+
+π4₃ : (n : ℕ) → ℕ
+π4₃ = π₁ ∘ π₂ ∘ π₂
+
+\end{code}
+
+The fourth projection from a quadruple.
+
+\begin{code}
+
+π4₄ : (n : ℕ) → ℕ
+π4₄ = π₂ ∘ π₂ ∘ π₂
 
 \end{code}
 
@@ -303,12 +339,12 @@ unpair-is-retraction-of-pair p = unpair-pairing-aux p (pair p) refl
 ＝π3₂ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → π3₂ x₁ ＝ π3₂ x₂
 ＝π3₂ {x₁} {x₂} refl = refl
 
-pairing3→₃-pairing3 : (x₁ x₂ x₃ : ℕ) → pairing3→₃ (pair₃ (x₁ , x₂ , x₃)) ＝ x₃
+pairing3→₃-pairing3 : (x₁ x₂ x₃ : ℕ) → π3₃ (pair₃ (x₁ , x₂ , x₃)) ＝ x₃
 pairing3→₃-pairing3 x₁ x₂ x₃ =
  ap (λ k → pr₂ (unpair (pr₂ k))) (unpair-is-retraction-of-pair (x₁ , pair (x₂ , x₃)))
  ∙ ap pr₂ (unpair-is-retraction-of-pair (x₂ , x₃))
 
-＝pairing3→₃ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → pairing3→₃ x₁ ＝ pairing3→₃ x₂
+＝pairing3→₃ : {x₁ x₂ : ℕ} → x₁ ＝ x₂ → π3₃ x₁ ＝ π3₃ x₂
 ＝pairing3→₃ {x₁} {x₂} refl = refl
 
 pair-is-injective : (p q : ℕ × ℕ) → pair p ＝ pair q → p ＝ q
@@ -476,6 +512,27 @@ unpair≤ (succ n) = {!!}
 
 π₂≤ : (n : ℕ) → π₂ n ≤ n
 π₂≤ n = pr₂ (unpair≤ n)
+
+π3₁≤ : (n : ℕ) → π3₁ n ≤ n
+π3₁≤ n = pr₁ (unpair≤ n)
+
+π3₂≤ : (n : ℕ) → π3₂ n ≤ n
+π3₂≤ n = ≤-trans (π3₂ n) (π₂ n) n (π₁≤ (π₂ n)) (π₂≤ n)
+
+π3₃≤ : (n : ℕ) → π3₃ n ≤ n
+π3₃≤ n = ≤-trans (π3₃ n) (π₂ n) n (π₂≤ (π₂ n)) (π₂≤ n)
+
+π4₁≤ : (n : ℕ) → π4₁ n ≤ n
+π4₁≤ n = pr₁ (unpair≤ n)
+
+π4₂≤ : (n : ℕ) → π4₂ n ≤ n
+π4₂≤ n = ≤-trans (π4₂ n) (π₂ n) n (π₁≤ (π₂ n)) (π₂≤ n)
+
+π4₃≤ : (n : ℕ) → π4₃ n ≤ n
+π4₃≤ n = ≤-trans (π4₃ n) (π₂ n) n (≤-trans (π4₃ n) (π₂ (π₂ n)) (π₂ n) (π₁≤ (π₂ (π₂ n))) (π₂≤ (π₂ n))) (π₂≤ n)
+
+π4₄≤ : (n : ℕ) → π4₄ n ≤ n
+π4₄≤ n = ≤-trans (π4₄ n) (π₂ n) n (≤-trans (π4₄ n) (π₂ (π₂ n)) (π₂ n) (π₂≤ (π₂ (π₂ n))) (π₂≤ (π₂ n))) (π₂≤ n)
 
 \end{code}
 
@@ -680,24 +737,24 @@ encode-type (σ ⇒ τ) = 1 +ᴸ (pair (encode-type σ , encode-type τ) * #type
 decode-type-aux-aux : (d : ℕ) (z : ℕ) → ((m : ℕ) → m < succ z → type) → type
 decode-type-aux-aux 0 z ind = ι
 decode-type-aux-aux (succ _) z ind = ind x₁ cx₁ ⇒ ind x₂ cx₂
-  where
-    n : ℕ
-    n = succ z
+ where
+  n : ℕ
+  n = succ z
 
-    m : ℕ
-    m = (n - 1) / #types
+  m : ℕ
+  m = (n - 1) / #types
 
-    x₁ : ℕ
-    x₁ = π₁ m
+  x₁ : ℕ
+  x₁ = π₁ m
 
-    cx₁ : x₁ < n
-    cx₁ = <-transʳ {x₁} {m} {n} (π₁≤ m) (succ-/≤ n 1 #types-1 (λ ()))
+  cx₁ : x₁ < n
+  cx₁ = <-transʳ {x₁} {m} {n} (π₁≤ m) (succ-/≤ n 1 #types-1 (λ ()))
 
-    x₂ : ℕ
-    x₂ = π₂ m
+  x₂ : ℕ
+  x₂ = π₂ m
 
-    cx₂ : x₂ < n
-    cx₂ = <-transʳ {x₂} {m} {n} (π₂≤ m) (succ-/≤ n 1 #types-1 (λ ()))
+  cx₂ : x₂ < n
+  cx₂ = <-transʳ {x₂} {m} {n} (π₂≤ m) (succ-/≤ n 1 #types-1 (λ ()))
 
 decode-type-aux : (n : ℕ) → ((m : ℕ) → m < n → type) → type
 decode-type-aux 0 ind = ι
@@ -847,18 +904,69 @@ decode-aux-aux : (d : ℕ) (z : ℕ) → ((m : ℕ) → m < succ z → {Γ : Cxt
 -- Zero
 decode-aux-aux 0 z ind {Γ} = tσ ι Zero
 -- Succ
-decode-aux-aux 1 z ind {Γ} = tσ ι (Succ (Tσ→T ι i))
-  where
-    n : ℕ
-    n = succ z
+decode-aux-aux 1 z ind {Γ} = tσ ι (Succ (Tσ→T ι t))
+ where
+  n : ℕ
+  n = succ z
 
-    m : ℕ
-    m = (n - 1) / #terms
+  m : ℕ
+  m = (n - 1) / #terms
 
-    i : Tσ Γ
-    i = ind m (succ-/≤ n 1 #terms-1 (λ ())) {Γ}
+  t : Tσ Γ
+  t = ind m (succ-/≤ n 1 #terms-1 (λ ())) {Γ}
+-- Rec
+decode-aux-aux 2 z ind {Γ} = tσ σ (Rec (Tσ→T (ι ⇒ σ ⇒ σ) t₁) (Tσ→T σ t₂) (Tσ→T ι t₃))
+ where
+  n : ℕ
+  n = succ z
+
+  m : ℕ
+  m = (n - 2) / #terms
+
+  x₁ : ℕ
+  x₁ = π4₁ m
+
+  -- no need
+  cx₁ : x₁ < n
+  cx₁ = <-transʳ {x₁} {m} {n} (π4₁≤ m) (succ-/≤ n 2 #terms-1 (λ ()))
+
+  σ : type
+  σ = decode-type x₁
+
+  x₂ : ℕ
+  x₂ = π4₂ m
+
+  cx₂ : x₂ < n
+  cx₂ = <-transʳ {x₂} {m} {n} (π4₂≤ m) (succ-/≤ n 2 #terms-1 (λ ()))
+
+  t₁ : Tσ Γ
+  t₁ = ind x₂ cx₂ {Γ}
+
+  x₃ : ℕ
+  x₃ = π4₃ m
+
+  cx₃ : x₃ < n
+  cx₃ = <-transʳ {x₃} {m} {n} (π4₃≤ m) (succ-/≤ n 2 #terms-1 (λ ()))
+
+  t₂ : Tσ Γ
+  t₂ = ind x₃ cx₃ {Γ}
+
+  x₄ : ℕ
+  x₄ = π4₄ m
+
+  cx₄ : x₄ < n
+  cx₄ = <-transʳ {x₄} {m} {n} (π4₄≤ m) (succ-/≤ n 2 #terms-1 (λ ()))
+
+  t₃ : Tσ Γ
+  t₃ = ind x₄ cx₄ {Γ}
+-- ν
+decode-aux-aux 3 z ind {Γ} = {!!}
+-- ƛ
+decode-aux-aux 4 z ind {Γ} = {!!}
+-- ·
+decode-aux-aux 5 z ind {Γ} = {!!}
 --
-decode-aux-aux (succ (succ _)) z ind {Γ} = {!!}
+decode-aux-aux (succ (succ (succ (succ (succ (succ _)))))) z ind {Γ} = {!!}
 
 decode-aux : (n : ℕ) → ((m : ℕ) → m < n → {Γ : Cxt} → Tσ Γ) → {Γ : Cxt} → Tσ Γ
 decode-aux 0 ind {Γ} = tσ ι Zero
