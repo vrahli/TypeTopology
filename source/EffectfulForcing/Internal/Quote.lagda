@@ -23,7 +23,8 @@ open import EffectfulForcing.MFPSAndVariations.Combinators
 open import Naturals.Division using (_∣_)
 open import UF.Base
 open import EffectfulForcing.Internal.SystemT
-open import EffectfulForcing.Internal.Subst using (dec-type ; weaken,)
+open import EffectfulForcing.Internal.Subst using (dec-type ; weaken, ; weaken₀)
+open import EffectfulForcing.Internal.Internal using (⌜B⌝)
 open import UF.Base using (transport₂ ; transport₃ ; ap₂ ; ap₃)
 
 \end{code}
@@ -53,6 +54,17 @@ data QT : (Γ : Cxt) (σ : type) → 𝓤₀ ̇  where
  _·_     : {Γ : Cxt} {σ τ : type} → QT Γ (σ ⇒ τ) → QT Γ σ → QT Γ τ
  Quote   : {Γ : Cxt} {σ   : type} → QT Γ σ → QT Γ ι
  Unquote : {Γ : Cxt} {σ   : type} → QT Γ ι → QT Γ σ
+
+QT₀ : type → Type
+QT₀ = QT 〈〉
+
+T→QT : {Γ : Cxt} {σ : type} (t : T Γ σ) → QT Γ σ
+T→QT {Γ} {.ι} Zero = Zero
+T→QT {Γ} {.ι} (Succ t) = Succ (T→QT t)
+T→QT {Γ} {σ} (Rec t t₁ t₂) = Rec (T→QT t) (T→QT t₁) (T→QT t₂)
+T→QT {Γ} {σ} (ν i) = ν i
+T→QT {Γ} {σ ⇒ τ} (ƛ t) = ƛ (T→QT t)
+T→QT {Γ} {σ} (t · t₁) = T→QT t · T→QT t₁
 
 -- testing:
 -- The Boolean is to differentiate 2 universes, where ₁ is the universe without quoting, i.e., System T.
@@ -472,9 +484,10 @@ division-by-2-lemma (succ n) = k + n + 1 , †
   k = pr₁ IH
 
   † : 2 * (k + n + 1) ＝ succ n + succ n * succ n
-  † = 2 * (k + n + 1)                ＝⟨ {!squaring-lemma!} ⟩
-      (2 * k) + (2 * n) + 2          ＝⟨ {!!} ⟩
-      (n + n * n) + (2 * n) + 2      ＝⟨ {!!} ⟩
+  † = 2 * (k + n + 1)                ＝⟨ distributivity-mult-over-addition 2 k (n + 1) ⟩
+      2 * k + 2 * (n + 1)            ＝⟨ ap (λ z → 2 * k + z) (distributivity-mult-over-addition 2 n 1) ⟩
+      (2 * k) + (2 * n) + 2          ＝⟨ ap (λ z → z + 2 * n + 2) (pr₂ IH) ⟩
+      n + (n * n) + (2 * n) + 2      ＝⟨ {!!} ⟩
       (n + 1) + (n * n + 2 * n + 1)  ＝⟨ ap (λ - → succ n + -) (squaring-lemma n ⁻¹) ⟩
       succ n + (succ n * succ n)     ∎
 
@@ -1107,6 +1120,12 @@ decode-aux n@(succ z) ind {Γ} = decode-aux-aux (n % #terms) z ind
 decode : ℕ → {Γ : Cxt} → Tσ Γ
 decode = comp-ind-ℕ (λ _ → {Γ : Cxt} → Tσ Γ) decode-aux
 
+\end{code}
+
+Semantics of QT terms:
+
+\begin{code}
+
 Q⟦_⟧ : {Γ : Cxt} {σ : type} → QT Γ σ → 【 Γ 】 → 〖 σ 〗
 Q⟦ Zero      ⟧  _ = 0
 Q⟦ Succ t    ⟧ xs = succ (Q⟦ t ⟧ xs)
@@ -1127,5 +1146,40 @@ Q⟦_⟧ {Γ} {σ} (Unquote t) xs = c
   c : 〖 σ 〗
   c = ⟦ Tσ→T σ s ⟧ xs -- This wouldn't terminate if decode was returning a QT
                       -- Should we instead allow quoting & unquoting T terms?
+
+\end{code}
+
+Continuity:
+
+\begin{code}
+
+add : T₀ (ι ⇒ ι ⇒ ι)
+add = ƛ (ƛ (Rec (ƛ (ƛ (Succ ν₀))) ν₁ ν₀))
+
+qadd : QT₀ (ι ⇒ ι ⇒ ι)
+qadd = T→QT add
+
+pred : T₀ (ι ⇒ ι)
+pred = ƛ (Rec (ƛ (ƛ ν₁)) Zero ν₀)
+
+qpred : QT₀ (ι ⇒ ι)
+qpred = T→QT pred
+
+sub : T₀ (ι ⇒ ι ⇒ ι)
+sub = ƛ (ƛ (Rec (ƛ (ƛ (weaken₀ pred · ν₀))) ν₁ ν₀))
+
+qsub : QT₀ (ι ⇒ ι ⇒ ι)
+qsub = T→QT sub
+
+div : T₀ (ι ⇒ ι ⇒ ι)
+div = {!!}
+
+qdiv : QT₀ (ι ⇒ ι ⇒ ι)
+qdiv = T→QT div
+
+diag : (A : type) → QT₀ (((ι ⇒ ι) ⇒ ι) ⇒ ⌜B⌝ ι A)
+diag A = ƛ {!!}
+-- encode ν₀
+-- implement decode + ⌜ _ ⌝ as a System T term
 
 \end{code}
