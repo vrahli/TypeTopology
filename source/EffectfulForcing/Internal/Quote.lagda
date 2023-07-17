@@ -23,7 +23,7 @@ open import EffectfulForcing.MFPSAndVariations.Combinators
 open import Naturals.Division using (_∣_)
 open import UF.Base
 open import EffectfulForcing.Internal.SystemT
-open import EffectfulForcing.Internal.Subst using (dec-type)
+open import EffectfulForcing.Internal.Subst using (dec-type ; weaken,)
 open import UF.Base using (transport₂ ; transport₃ ; ap₂ ; ap₃)
 
 \end{code}
@@ -707,27 +707,15 @@ m*sn/sn≡m m n = {!!} --m*n/n≡m m (suc n)
 
 \end{code}
 
-The encoding function `encode`:
+The encoding and decoding of types:
 
 \begin{code}
-
-#terms : ℕ
-#terms = 8
-
-#terms-1 : ℕ
-#terms-1 = #terms - 1
 
 #types : ℕ
 #types = 2
 
 #types-1 : ℕ
 #types-1 = #types - 1
-
-#cxts : ℕ
-#cxts = 2
-
-#cxts-1 : ℕ
-#cxts-1 = #cxts - 1
 
 encode-type : type → ℕ
 encode-type ι       = 0
@@ -854,6 +842,66 @@ decode-type-is-retraction-of-encode-type (σ ⇒ τ) =
    (decode-type-is-retraction-of-encode-type σ)
    (decode-type-is-retraction-of-encode-type τ)
 
+\end{code}
+
+Terms packaged with their types:
+
+\begin{code}
+
+record Tσ (Γ : Cxt) : 𝓤₀ ̇  where
+ constructor tσ
+ field
+  Tσ-σ : type
+  Tσ-t : T Γ Tσ-σ
+
+-- default term of type σ
+σ→T : (Γ : Cxt) (σ : type) → T Γ σ
+σ→T Γ ι = Zero
+σ→T Γ (σ ⇒ τ) = ƛ (σ→T (Γ ,, σ) τ)
+
+→Tσ : (Γ : Cxt) → Tσ Γ
+→Tσ Γ = tσ ι (σ→T Γ ι)
+
+Tσ→T : {Γ : Cxt} (σ : type) (t : Tσ Γ) → T Γ σ
+Tσ→T {Γ} σ (tσ τ t) with dec-type σ τ
+... | inl refl = t
+... | inr _ = σ→T Γ σ
+
+\end{code}
+
+Encoding and decoding of variables:
+
+\begin{code}
+
+encode-∈Cxt : {σ : type} {Γ : Cxt} (i : ∈Cxt σ Γ) → ℕ
+encode-∈Cxt {σ} {Γ ,, .σ} (∈Cxt0 Γ) = 0
+encode-∈Cxt {σ} {Γ ,, τ} (∈CxtS τ i) = succ (encode-∈Cxt i)
+
+Tσ-weaken,, : {Γ : Cxt} (σ : type) → Tσ Γ → Tσ (Γ ,, σ)
+Tσ-weaken,, {Γ} σ (tσ τ t) = tσ τ (weaken, σ t)
+
+decode-∈Cxt : {Γ : Cxt} (n : ℕ) → Tσ Γ
+decode-∈Cxt {〈〉} n = →Tσ 〈〉 -- some default value
+decode-∈Cxt {Γ ,, σ} 0 = tσ σ (ν (∈Cxt0 Γ))
+decode-∈Cxt {Γ ,, σ} (succ n) = Tσ-weaken,, σ t
+ where
+  t : Tσ Γ
+  t = decode-∈Cxt {Γ} n
+
+\end{code}
+
+Encoding and decoding of contexts:
+
+\begin{code}
+
+{--
+#cxts : ℕ
+#cxts = 2
+
+#cxts-1 : ℕ
+#cxts-1 = #cxts - 1
+--}
+
 {-
 encode-Cxt : Cxt → ℕ
 encode-Cxt 〈〉       = 0
@@ -878,34 +926,27 @@ decode-Cxt : ℕ → Cxt
 decode-Cxt = comp-ind-ℕ (λ _ → Cxt) decode-Cxt-aux
 -}
 
+\end{code}
+
+Encoding and decoding of terms:
+
+\begin{code}
+
+#terms : ℕ
+#terms = 8
+
+#terms-1 : ℕ
+#terms-1 = #terms - 1
+
 encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
 encode {Γ} {.ι} Zero          = 0
 encode {Γ} {.ι} (Succ t)      = 1 +ᴸ encode t * #terms
 encode {Γ} {σ} (Rec t t₁ t₂) = 2 +ᴸ pair₄ (encode-type σ , encode t , encode t₁ , encode t₂) * #terms
-encode {Γ} {σ} (ν x)         = 3 +ᴸ pair  (encode-type σ , {!!}) * #terms
+encode {Γ} {σ} (ν x)         = 3 +ᴸ encode-∈Cxt x * #terms
 encode {Γ} {σ ⇒ τ} (ƛ t)     = 4 +ᴸ pair₃ (encode-type σ , encode-type τ , encode t) * #terms
 encode {Γ} {σ} (_·_ {Γ} {τ} {σ} t t₁) = 5 +ᴸ pair₄ (encode-type σ , encode-type τ , encode t , encode t₁) * #terms
 encode {Γ} {ι} (Quote t)     = 6 +ᴸ encode t * #terms
 encode {Γ} {σ} (Unquote t)   = 7 +ᴸ pair  (encode-type σ , encode t) * #terms
-
-record Tσ (Γ : Cxt) : 𝓤₀ ̇  where
- constructor tσ
- field
-  Tσ-σ : type
-  Tσ-t : T Γ Tσ-σ
-
--- default term of type σ
-σ→T : (Γ : Cxt) (σ : type) → T Γ σ
-σ→T Γ ι = Zero
-σ→T Γ (σ ⇒ τ) = ƛ (σ→T (Γ ,, σ) τ)
-
-→Tσ : (Γ : Cxt) → Tσ Γ
-→Tσ Γ = tσ ι (σ→T Γ ι)
-
-Tσ→T : {Γ : Cxt} (σ : type) (t : Tσ Γ) → T Γ σ
-Tσ→T {Γ} σ (tσ τ t) with dec-type σ τ
-... | inl refl = t
-... | inr _ = σ→T Γ σ
 
 -- d is n % #terms, i.e. (succ z) % #terms
 decode-aux-aux : (d : ℕ) (z : ℕ) → ((m : ℕ) → m < succ z → {Γ : Cxt} → Tσ Γ) → {Γ : Cxt} → Tσ Γ
@@ -968,7 +1009,13 @@ decode-aux-aux k@2 z ind {Γ} = tσ σ (Rec (Tσ→T (ι ⇒ σ ⇒ σ) t₁) (T
   t₃ : Tσ Γ
   t₃ = ind x₄ cx₄ {Γ}
 -- ν
-decode-aux-aux 3 z ind {Γ} = {!!}
+decode-aux-aux k@3 z ind {Γ} = decode-∈Cxt {Γ} m
+ where
+  n : ℕ
+  n = succ z
+
+  m : ℕ
+  m = (n - k) / #terms
 -- ƛ
 decode-aux-aux k@4 z ind {Γ} = tσ (σ ⇒ τ) (ƛ (Tσ→T τ t₂))
  where
