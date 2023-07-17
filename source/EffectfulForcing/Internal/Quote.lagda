@@ -32,7 +32,6 @@ Boolean ∧
 
 \begin{code}
 
-
 _∧_ : 𝟚 → 𝟚 → 𝟚
 ₁ ∧ b = b
 ₀ ∧ b = ₀
@@ -45,17 +44,6 @@ System T with quoting.
 
 \begin{code}
 
--- The Boolean is to differentiate 2 universe, where ₁ is the universe without quoting, i.e., System T.
-data QT' : (b : 𝟚) (Γ : Cxt) (σ : type) → 𝓤₀ ̇  where
- Zero    : {b        : 𝟚} {Γ : Cxt}              → QT' b Γ ι
- Succ    : {b        : 𝟚} {Γ : Cxt}              → QT' b Γ ι → QT' b Γ ι
- Rec     : {b₁ b₂ b₃ : 𝟚} {Γ : Cxt} {σ   : type} → QT' b₁ Γ (ι ⇒ σ ⇒ σ) → QT' b₂ Γ σ → QT' b₃ Γ ι → QT' (b₁ ∧ b₂ ∧ b₃) Γ σ
- ν       : {b        : 𝟚} {Γ : Cxt} {σ   : type} → ∈Cxt σ Γ  → QT' b Γ σ
- ƛ       : {b        : 𝟚} {Γ : Cxt} {σ τ : type} → QT' b (Γ ,, σ) τ → QT' b Γ (σ ⇒ τ)
- _·_     : {b₁ b₂    : 𝟚} {Γ : Cxt} {σ τ : type} → QT' b₂ Γ (σ ⇒ τ) → QT' b₂ Γ σ → QT' (b₁ ∧ b₂) Γ τ
- Quote   : {b        : 𝟚} {Γ : Cxt} {σ   : type} → QT' b Γ σ → QT' ₀ Γ ι
- Unquote : {b        : 𝟚} {Γ : Cxt} {σ   : type} → QT' b Γ ι → QT' ₀ Γ σ
-
 data QT : (Γ : Cxt) (σ : type) → 𝓤₀ ̇  where
  Zero    : {Γ : Cxt}              → QT Γ ι
  Succ    : {Γ : Cxt}              → QT Γ ι → QT Γ ι
@@ -65,6 +53,18 @@ data QT : (Γ : Cxt) (σ : type) → 𝓤₀ ̇  where
  _·_     : {Γ : Cxt} {σ τ : type} → QT Γ (σ ⇒ τ) → QT Γ σ → QT Γ τ
  Quote   : {Γ : Cxt} {σ   : type} → QT Γ σ → QT Γ ι
  Unquote : {Γ : Cxt} {σ   : type} → QT Γ ι → QT Γ σ
+
+-- testing:
+-- The Boolean is to differentiate 2 universes, where ₁ is the universe without quoting, i.e., System T.
+data QT' : (b : 𝟚) (Γ : Cxt) (σ : type) → 𝓤₀ ̇  where
+ Zero    : {b        : 𝟚} {Γ : Cxt}              → QT' b Γ ι
+ Succ    : {b        : 𝟚} {Γ : Cxt}              → QT' b Γ ι → QT' b Γ ι
+ Rec     : {b₁ b₂ b₃ : 𝟚} {Γ : Cxt} {σ   : type} → QT' b₁ Γ (ι ⇒ σ ⇒ σ) → QT' b₂ Γ σ → QT' b₃ Γ ι → QT' (b₁ ∧ b₂ ∧ b₃) Γ σ
+ ν       : {b        : 𝟚} {Γ : Cxt} {σ   : type} → ∈Cxt σ Γ  → QT' b Γ σ
+ ƛ       : {b        : 𝟚} {Γ : Cxt} {σ τ : type} → QT' b (Γ ,, σ) τ → QT' b Γ (σ ⇒ τ)
+ _·_     : {b₁ b₂    : 𝟚} {Γ : Cxt} {σ τ : type} → QT' b₂ Γ (σ ⇒ τ) → QT' b₂ Γ σ → QT' (b₁ ∧ b₂) Γ τ
+ Quote   : {b        : 𝟚} {Γ : Cxt} {σ   : type} → QT' b Γ σ → QT' ₀ Γ ι
+ Unquote : {b        : 𝟚} {Γ : Cxt} {σ   : type} → QT' b Γ ι → QT' ₀ Γ σ
 
 \end{code}
 
@@ -741,20 +741,23 @@ decode-type-aux-aux (succ _) z ind = ind x₁ cx₁ ⇒ ind x₂ cx₂
   n : ℕ
   n = succ z
 
+  k : ℕ
+  k = 1
+
   m : ℕ
-  m = (n - 1) / #types
+  m = (n - k) / #types
 
   x₁ : ℕ
   x₁ = π₁ m
 
   cx₁ : x₁ < n
-  cx₁ = <-transʳ {x₁} {m} {n} (π₁≤ m) (succ-/≤ n 1 #types-1 (λ ()))
+  cx₁ = <-transʳ {x₁} {m} {n} (π₁≤ m) (succ-/≤ n k #types-1 (λ ()))
 
   x₂ : ℕ
   x₂ = π₂ m
 
   cx₂ : x₂ < n
-  cx₂ = <-transʳ {x₂} {m} {n} (π₂≤ m) (succ-/≤ n 1 #types-1 (λ ()))
+  cx₂ = <-transʳ {x₂} {m} {n} (π₂≤ m) (succ-/≤ n k #types-1 (λ ()))
 
 decode-type-aux : (n : ℕ) → ((m : ℕ) → m < n → type) → type
 decode-type-aux 0 ind = ι
@@ -851,6 +854,7 @@ decode-type-is-retraction-of-encode-type (σ ⇒ τ) =
    (decode-type-is-retraction-of-encode-type σ)
    (decode-type-is-retraction-of-encode-type τ)
 
+{-
 encode-Cxt : Cxt → ℕ
 encode-Cxt 〈〉       = 0
 encode-Cxt (Γ ,, σ) = 1 +ᴸ pair (encode-Cxt Γ , encode-type σ) * #cxts
@@ -872,10 +876,11 @@ decode-Cxt-aux n@(succ z) ind with n % #cxts
 
 decode-Cxt : ℕ → Cxt
 decode-Cxt = comp-ind-ℕ (λ _ → Cxt) decode-Cxt-aux
+-}
 
 encode : {Γ : Cxt} {σ : type} → QT Γ σ → ℕ
-encode {Γ} {ι} Zero          = 0
-encode {Γ} {ι} (Succ t)      = 1 +ᴸ encode t * #terms
+encode {Γ} {.ι} Zero          = 0
+encode {Γ} {.ι} (Succ t)      = 1 +ᴸ encode t * #terms
 encode {Γ} {σ} (Rec t t₁ t₂) = 2 +ᴸ pair₄ (encode-type σ , encode t , encode t₁ , encode t₂) * #terms
 encode {Γ} {σ} (ν x)         = 3 +ᴸ pair  (encode-type σ , {!!}) * #terms
 encode {Γ} {σ ⇒ τ} (ƛ t)     = 4 +ᴸ pair₃ (encode-type σ , encode-type τ , encode t) * #terms
