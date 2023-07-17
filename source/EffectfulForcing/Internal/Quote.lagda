@@ -879,7 +879,7 @@ encode {Γ} {ι} (Succ t)      = 1 +ᴸ encode t * #terms
 encode {Γ} {σ} (Rec t t₁ t₂) = 2 +ᴸ pair₄ (encode-type σ , encode t , encode t₁ , encode t₂) * #terms
 encode {Γ} {σ} (ν x)         = 3 +ᴸ pair  (encode-type σ , {!!}) * #terms
 encode {Γ} {σ ⇒ τ} (ƛ t)     = 4 +ᴸ pair₃ (encode-type σ , encode-type τ , encode t) * #terms
-encode {Γ} {σ} (t · t₁)      = 5 +ᴸ pair₃ (encode-type σ , encode t , encode t₁) * #terms
+encode {Γ} {σ} (_·_ {Γ} {τ} {σ} t t₁) = 5 +ᴸ pair₄ (encode-type σ , encode-type τ , encode t , encode t₁) * #terms
 encode {Γ} {ι} (Quote t)     = 6 +ᴸ encode t * #terms
 encode {Γ} {σ} (Unquote t)   = 7 +ᴸ pair  (encode-type σ , encode t) * #terms
 
@@ -889,10 +889,13 @@ record Tσ (Γ : Cxt) : 𝓤₀ ̇  where
   Tσ-σ : type
   Tσ-t : T Γ Tσ-σ
 
--- default terms of type σ
+-- default term of type σ
 σ→T : (Γ : Cxt) (σ : type) → T Γ σ
 σ→T Γ ι = Zero
 σ→T Γ (σ ⇒ τ) = ƛ (σ→T (Γ ,, σ) τ)
+
+→Tσ : (Γ : Cxt) → Tσ Γ
+→Tσ Γ = tσ ι (σ→T Γ ι)
 
 Tσ→T : {Γ : Cxt} (σ : type) (t : Tσ Γ) → T Γ σ
 Tσ→T {Γ} σ (tσ τ t) with dec-type σ τ
@@ -904,31 +907,31 @@ decode-aux-aux : (d : ℕ) (z : ℕ) → ((m : ℕ) → m < succ z → {Γ : Cxt
 -- Zero
 decode-aux-aux 0 z ind {Γ} = tσ ι Zero
 -- Succ
-decode-aux-aux 1 z ind {Γ} = tσ ι (Succ (Tσ→T ι t))
+decode-aux-aux k@1 z ind {Γ} = tσ ι (Succ (Tσ→T ι t))
  where
   n : ℕ
   n = succ z
 
   m : ℕ
-  m = (n - 1) / #terms
+  m = (n - k) / #terms
 
   t : Tσ Γ
-  t = ind m (succ-/≤ n 1 #terms-1 (λ ())) {Γ}
+  t = ind m (succ-/≤ n k #terms-1 (λ ())) {Γ}
 -- Rec
-decode-aux-aux 2 z ind {Γ} = tσ σ (Rec (Tσ→T (ι ⇒ σ ⇒ σ) t₁) (Tσ→T σ t₂) (Tσ→T ι t₃))
+decode-aux-aux k@2 z ind {Γ} = tσ σ (Rec (Tσ→T (ι ⇒ σ ⇒ σ) t₁) (Tσ→T σ t₂) (Tσ→T ι t₃))
  where
   n : ℕ
   n = succ z
 
   m : ℕ
-  m = (n - 2) / #terms
+  m = (n - k) / #terms
 
   x₁ : ℕ
   x₁ = π4₁ m
 
   -- no need
-  cx₁ : x₁ < n
-  cx₁ = <-transʳ {x₁} {m} {n} (π4₁≤ m) (succ-/≤ n 2 #terms-1 (λ ()))
+  --cx₁ : x₁ < n
+  --cx₁ = <-transʳ {x₁} {m} {n} (π4₁≤ m) (succ-/≤ n k #terms-1 (λ ()))
 
   σ : type
   σ = decode-type x₁
@@ -937,7 +940,7 @@ decode-aux-aux 2 z ind {Γ} = tσ σ (Rec (Tσ→T (ι ⇒ σ ⇒ σ) t₁) (Tσ
   x₂ = π4₂ m
 
   cx₂ : x₂ < n
-  cx₂ = <-transʳ {x₂} {m} {n} (π4₂≤ m) (succ-/≤ n 2 #terms-1 (λ ()))
+  cx₂ = <-transʳ {x₂} {m} {n} (π4₂≤ m) (succ-/≤ n k #terms-1 (λ ()))
 
   t₁ : Tσ Γ
   t₁ = ind x₂ cx₂ {Γ}
@@ -946,7 +949,7 @@ decode-aux-aux 2 z ind {Γ} = tσ σ (Rec (Tσ→T (ι ⇒ σ ⇒ σ) t₁) (Tσ
   x₃ = π4₃ m
 
   cx₃ : x₃ < n
-  cx₃ = <-transʳ {x₃} {m} {n} (π4₃≤ m) (succ-/≤ n 2 #terms-1 (λ ()))
+  cx₃ = <-transʳ {x₃} {m} {n} (π4₃≤ m) (succ-/≤ n k #terms-1 (λ ()))
 
   t₂ : Tσ Γ
   t₂ = ind x₃ cx₃ {Γ}
@@ -955,18 +958,95 @@ decode-aux-aux 2 z ind {Γ} = tσ σ (Rec (Tσ→T (ι ⇒ σ ⇒ σ) t₁) (Tσ
   x₄ = π4₄ m
 
   cx₄ : x₄ < n
-  cx₄ = <-transʳ {x₄} {m} {n} (π4₄≤ m) (succ-/≤ n 2 #terms-1 (λ ()))
+  cx₄ = <-transʳ {x₄} {m} {n} (π4₄≤ m) (succ-/≤ n k #terms-1 (λ ()))
 
   t₃ : Tσ Γ
   t₃ = ind x₄ cx₄ {Γ}
 -- ν
 decode-aux-aux 3 z ind {Γ} = {!!}
 -- ƛ
-decode-aux-aux 4 z ind {Γ} = {!!}
+decode-aux-aux k@4 z ind {Γ} = tσ (σ ⇒ τ) (ƛ (Tσ→T τ t₂))
+ where
+  n : ℕ
+  n = succ z
+
+  m : ℕ
+  m = (n - k) / #terms
+
+  x₁ : ℕ
+  x₁ = π3₁ m
+
+  --cx₁ : x₁ < n
+  --cx₁ = <-transʳ {x₁} {m} {n} (π3₁≤ m) (succ-/≤ n k #terms-1 (λ ()))
+
+  σ : type
+  σ = decode-type x₁
+
+  x₂ : ℕ
+  x₂ = π3₂ m
+
+  --cx₂ : x₂ < n
+  --cx₂ = <-transʳ {x₂} {m} {n} (π3₂≤ m) (succ-/≤ n k #terms-1 (λ ()))
+
+  τ : type
+  τ = decode-type x₂
+
+  x₃ : ℕ
+  x₃ = π3₃ m
+
+  cx₃ : x₃ < n
+  cx₃ = <-transʳ {x₃} {m} {n} (π3₃≤ m) (succ-/≤ n k #terms-1 (λ ()))
+
+  t₂ : Tσ (Γ ,, σ)
+  t₂ = ind x₃ cx₃ {Γ ,, σ}
 -- ·
-decode-aux-aux 5 z ind {Γ} = {!!}
---
-decode-aux-aux (succ (succ (succ (succ (succ (succ _)))))) z ind {Γ} = {!!}
+decode-aux-aux k@5 z ind {Γ} = tσ σ (Tσ→T (τ ⇒ σ) t₁ · Tσ→T τ t₂)
+ where
+  n : ℕ
+  n = succ z
+
+  m : ℕ
+  m = (n - k) / #terms
+
+  x₁ : ℕ
+  x₁ = π3₁ m
+
+  -- no need
+  --cx₁ : x₁ < n
+  --cx₁ = <-transʳ {x₁} {m} {n} (π4₁≤ m) (succ-/≤ n k #terms-1 (λ ()))
+
+  σ : type -- return type
+  σ = decode-type x₁
+
+  x₂ : ℕ
+  x₂ = π4₂ m
+
+  -- no need
+  --cx₂ : x₁ < n
+  --cx₂ = <-transʳ {x₂} {m} {n} (π4₂≤ m) (succ-/≤ n k #terms-1 (λ ()))
+
+  τ : type -- type of the argument
+  τ = decode-type x₂
+
+  x₃ : ℕ
+  x₃ = π4₃ m
+
+  cx₃ : x₃ < n
+  cx₃ = <-transʳ {x₃} {m} {n} (π4₃≤ m) (succ-/≤ n k #terms-1 (λ ()))
+
+  t₁ : Tσ Γ
+  t₁ = ind x₃ cx₃ {Γ}
+
+  x₄ : ℕ
+  x₄ = π4₄ m
+
+  cx₄ : x₄ < n
+  cx₄ = <-transʳ {x₄} {m} {n} (π4₄≤ m) (succ-/≤ n k #terms-1 (λ ()))
+
+  t₂ : Tσ Γ
+  t₂ = ind x₄ cx₄ {Γ}
+-- default
+decode-aux-aux (succ (succ (succ (succ (succ (succ _)))))) z ind {Γ} = →Tσ Γ
 
 decode-aux : (n : ℕ) → ((m : ℕ) → m < n → {Γ : Cxt} → Tσ Γ) → {Γ : Cxt} → Tσ Γ
 decode-aux 0 ind {Γ} = tσ ι Zero
