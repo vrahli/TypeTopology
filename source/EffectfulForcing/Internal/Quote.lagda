@@ -23,8 +23,9 @@ open import EffectfulForcing.MFPSAndVariations.Combinators
 open import Naturals.Division using (_∣_)
 open import UF.Base
 open import EffectfulForcing.Internal.SystemT
-open import EffectfulForcing.Internal.Subst using (dec-type ; weaken, ; weaken₀)
-open import EffectfulForcing.Internal.Internal using (⌜B⌝)
+open import EffectfulForcing.Internal.Subst
+ using (dec-type ; weaken, ; weaken₀ ; _⊆_ ; ⊆,, ; ⊆〈〉 ; ⊆,)
+open import EffectfulForcing.Internal.Internal using (⌜B⌝ ; ⌜zero⌝ ; ⌜succ⌝)
 open import UF.Base using (transport₂ ; transport₃ ; ap₂ ; ap₃)
 
 \end{code}
@@ -83,6 +84,28 @@ qν₄ {Γ} {σ₁} {σ₂} {σ₃} {σ₄} {σ₅} = T→QT ν₄
 
 qν₅ : {Γ : Cxt} {σ₁ σ₂ σ₃ σ₄ σ₅ σ₆ : type} → QT (Γ ,, σ₁ ,, σ₂ ,, σ₃ ,, σ₄ ,, σ₅ ,, σ₆) σ₁
 qν₅ {Γ} {σ₁} {σ₂} {σ₃} {σ₄} {σ₅} {σ₆} = T→QT ν₅
+
+-- extends the context of a term
+qweaken : {Γ₁ : Cxt} {Γ₂ : Cxt} {σ : type}
+        → Γ₁ ⊆ Γ₂
+        → QT Γ₁ σ
+        → QT Γ₂ σ
+qweaken {Γ₁} {Γ₂} {_}     sub Zero        = Zero
+qweaken {Γ₁} {Γ₂} {_}     sub (Succ t)    = Succ (qweaken sub t)
+qweaken {Γ₁} {Γ₂} {_}     sub (Rec f g t) = Rec (qweaken sub f) (qweaken sub g) (qweaken sub t)
+qweaken {Γ₁} {Γ₂} {σ}     sub (ν i)       = ν (sub i)
+qweaken {Γ₁} {Γ₂} {σ ⇒ τ} sub (ƛ t)       = ƛ (qweaken (⊆,, σ sub) t)
+qweaken {Γ₁} {Γ₂} {σ}     sub (t · t₁)    = qweaken sub t · qweaken sub t₁
+qweaken {Γ₁} {Γ₂} {_}     sub (Quote t)   = Quote (qweaken sub t)
+qweaken {Γ₁} {Γ₂} {σ}     sub (Unquote t) = Unquote (qweaken sub t)
+
+-- extends the context of a closed term
+qweaken₀ : {Γ : Cxt} {σ : type} → QT₀ σ → QT Γ σ
+qweaken₀ {Γ} {σ} t = qweaken (⊆〈〉 Γ) t
+
+-- extends the context with one type
+qweaken, : {Γ : Cxt} {σ : type} (τ : type) → QT Γ σ → QT (Γ ,, τ) σ
+qweaken, {Γ} {σ} τ t = qweaken {Γ} {Γ ,, τ} (⊆, Γ τ) t
 
 -- testing:
 -- The Boolean is to differentiate 2 universes, where ₁ is the universe without quoting, i.e., System T.
@@ -1195,15 +1218,26 @@ div = {!!}
 qdiv : QT₀ (ι ⇒ ι ⇒ ι)
 qdiv = T→QT div
 
+qnumeral : {Γ : Cxt} → ℕ → QT Γ ι
+qnumeral {Γ} n = T→QT (numeral n)
+
 diag : (A : type) → QT₀ (((ι ⇒ ι) ⇒ ι) ⇒ ⌜B⌝ ι A)
 diag A = ƛ c
  where
-  -- we encode ν₀
+  -- we encode ν₀, but it is meant to be a T, not a QT
   i : QT (〈〉 ,, ((ι ⇒ ι) ⇒ ι)) ι
   i = Quote qν₀
 
+  -- case where: i % #terms ≡ 0
+  c0 : QT (〈〉 ,, ((ι ⇒ ι) ⇒ ι) ,, ι ,, ⌜B⌝ ι A) (⌜B⌝ ι A)
+  c0 = T→QT ⌜zero⌝
+
   -- we implement decode + ⌜ _ ⌝ as a System T term (within QT)
   c : QT (〈〉 ,, ((ι ⇒ ι) ⇒ ι)) (⌜B⌝ ι A)
-  c = {!!}
+  c = Rec (ƛ (ƛ (Rec {!!}
+                     {!!}
+                     (qweaken, (⌜B⌝ ι A) (qweaken, ι (qweaken, ((ι ⇒ ι) ⇒ ι) qdiv · i · qnumeral #terms))))))
+          (T→QT ⌜zero⌝)
+          i
 
 \end{code}
