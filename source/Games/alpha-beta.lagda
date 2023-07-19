@@ -172,7 +172,7 @@ quantifiers in an alternating fashion.
  G-strategy = selection-strategy R G-selections q
 
  optimal-play : Path Xt
- optimal-play = J-sequence R G-selections q
+ optimal-play = sequenceᴶ R G-selections q
 
 \end{code}
 
@@ -180,7 +180,7 @@ TODO. Prove the lemma formulated as an assumption of the above module (easy).
 
 \begin{code}
 
- module _ (lemma : _are-selections-of_ R G-selections G-quantifiers)
+ module _ (lemma : _Attains_ R G-selections G-quantifiers)
           (fe : Fun-Ext)
         where
 
@@ -250,7 +250,7 @@ reader monad, to speed-up the computation of the optimal play.
   ρ : T R → R
   ρ = structure-map 𝓡
 
-  open import Games.FiniteHistoryDependentMonadic
+  open import Games.FiniteHistoryDependentTransformer
                fe
                (Reader AB)
                R
@@ -273,7 +273,7 @@ reader monad, to speed-up the computation of the optimal play.
   G-selections† = argmaxmin† Xt Xt-is-listed⁺
 
   optimal-play† : Path Xt
-  optimal-play† = JT-sequence G-selections† q† (-∞ , ∞)
+  optimal-play† = sequenceᴶᵀ G-selections† q† (-∞ , ∞)
 
 \end{code}
 
@@ -406,7 +406,7 @@ module minimax'
 
   theorem' : optimal-outcome R' G'
            ＝ (K-sequence R (maxmin Xt Xt-is-listed⁺) q ,
-              J-sequence R (argmaxmin Xt Xt-is-listed⁺) q)
+              sequenceᴶ R (argmaxmin Xt Xt-is-listed⁺) q)
   theorem' = {!!}
 -}
 
@@ -898,7 +898,7 @@ the tic-tac-toe board:
 
 \end{code}
 
-This tries to compute the optimal play suing selection functions
+This tries to compute an optimal play using selection functions
 without any optimization:
 
 \begin{code}
